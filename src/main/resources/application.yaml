@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: shopping-sys
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/shopping_sys
+    username: postgres
+    password: devzeus2004
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
