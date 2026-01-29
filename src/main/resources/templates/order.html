@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đặt hàng - Shopping System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: #212529;
+            flex-grow: 1;
+        }
+
+        .product-image {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button,
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-confirm {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background-color: #218838;
+        }
+
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background-color: #5a6268;
+        }
+
+        .total-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: right;
+            padding: 20px;
+            background-color: #d4edda;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .info-row {
+                flex-direction: column;
+            }
+
+            .info-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button,
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛒 Xác Nhận Đặt Hàng</h1>
+
+        <div class="order-info">
+            <div class="info-row">
+                <span class="info-label">Người đặt hàng:</span>
+                <span class="info-value" th:text="${username}">User</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Hình ảnh sản phẩm:</span>
+                <div class="info-value">
+                    <img th:if="${product.productImg != null}" th:src="@{'/products/image/' + ${product.productId}}"
+                        alt="Product Image" class="product-image">
+                    <span th:if="${product.productImg == null}">Không có hình ảnh</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Mã sản phẩm:</span>
+                <span class="info-value" th:text="${product.productId}">1</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Tên sản phẩm:</span>
+                <span class="info-value" th:text="${product.productName}">Product Name</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Loại sản phẩm:</span>
+                <span class="info-value" th:text="${product.productType?.producttypeName}">Category</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Mô tả:</span>
+                <span class="info-value" th:text="${product.productDescription}">Description</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Số lượng:</span>
+                <span class="info-value" th:text="${quantity}">0</span>
+            </div>
+        </div>
+
+        <form method="post" th:action="@{/orders/confirm}">
+            <input type="hidden" name="productId" th:value="${product.productId}">
+            <input type="hidden" name="quantity" th:value="${quantity}">
+
+            <div class="button-group">
+                <button type="submit" class="btn-confirm">✓ Xác nhận đặt hàng</button>
+                <a href="/products/list" class="btn btn-cancel">✗ Hủy</a>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>

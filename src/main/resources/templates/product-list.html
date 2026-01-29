@@ -188,6 +188,21 @@
             text-align: center;
         }
 
+        .btn-order {
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-order:hover {
+            background-color: #218838;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -253,6 +268,7 @@
                             <th>Loại sản phẩm</th>
                             <th>Mô tả</th>
                             <th>Số lượng đặt hàng</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -268,7 +284,13 @@
                             <td th:text="${product.producttypeName}">Product Type</td>
                             <td th:text="${product.productDescription}">Description</td>
                             <td>
-                                <input type="number" class="quantity-input" min="0" value="" placeholder="0">
+                                <input type="number" class="quantity-input" min="0" value="0" placeholder="0"
+                                    th:id="'quantity-' + ${product.productId}">
+                            </td>
+                            <td>
+                                <button class="btn-order" th:onclick="|orderProduct(${product.productId})|">
+                                    Đặt hàng
+                                </button>
                             </td>
                         </tr>
                     </tbody>
@@ -330,6 +352,18 @@
     <script>
         function resetForm() {
             window.location.href = '/products/list';
+        }
+
+        function orderProduct(productId) {
+            const quantity = document.getElementById('quantity-' + productId).value;
+
+            if (!quantity || quantity <= 0) {
+                alert('Vui lòng nhập số lượng hợp lệ!');
+                return;
+            }
+
+            // Redirect to order page with product and quantity
+            window.location.href = `/orders/place?productId=${productId}&quantity=${quantity}`;
         }
     </script>
 </body>
