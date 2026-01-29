@@ -17,8 +17,10 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
 
         .login-container {
@@ -28,6 +30,7 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 400px;
+            margin-bottom: 80px;
         }
 
         .login-header {
@@ -110,9 +113,19 @@
 
         .footer-text {
             text-align: center;
-            margin-top: 20px;
-            color: #666;
+            color: white;
             font-size: 12px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 0;
+            border-top: 1px solid rgba(0, 0, 0);
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-text p {
+            margin: 0;
         }
     </style>
 </head>
@@ -145,10 +158,10 @@
 
             <button type="submit" class="btn-login">Đăng nhập</button>
         </form>
+    </div>
 
-        <div class="footer-text">
-            <p>Demo login - Spring Security</p>
-        </div>
+    <div class="footer-text">
+        <p>Demo login - Spring Security</p>
     </div>
 </body>
 

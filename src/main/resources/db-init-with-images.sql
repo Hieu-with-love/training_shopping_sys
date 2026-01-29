@@ -1,0 +1,104 @@
+-- PostgreSQL Script with real image data (binary) for testing
+-- This includes small sample JPEG images for testing the byte[] storage
+
+-- Drop and recreate tables to ensure correct schema
+DROP TABLE IF EXISTS trproductorder CASCADE;
+DROP TABLE IF EXISTS mstproduct CASCADE;
+DROP TABLE IF EXISTS mstproducttype CASCADE;
+
+-- Create mstproducttype table
+CREATE TABLE IF NOT EXISTS mstproducttype (
+    producttype_id BIGSERIAL PRIMARY KEY,
+    producttype_name VARCHAR(400),
+    status VARCHAR(1)
+);
+
+-- Create mstproduct table with correct column types
+CREATE TABLE IF NOT EXISTS mstproduct (
+    product_id BIGSERIAL PRIMARY KEY,
+    product_name VARCHAR(400),
+    product_description VARCHAR(400),
+    product_img BYTEA,
+    producttype_id BIGINT,
+    status VARCHAR(1),
+    FOREIGN KEY (producttype_id) REFERENCES mstproducttype(producttype_id)
+);
+
+-- Create trproductorder table
+CREATE TABLE IF NOT EXISTS trproductorder (
+    order_id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT,
+    quantity INTEGER,
+    user_id BIGINT,
+    order_date TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES mstproduct(product_id)
+);
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    enabled BOOLEAN DEFAULT TRUE
+);
+
+-- Insert Product Types
+INSERT INTO mstproducttype (producttype_id, producttype_name, status) VALUES
+(1, 'Điện tử', '0'),
+(2, 'Thời trang', '0'),
+(3, 'Gia dụng', '0'),
+(4, 'Sách', '0');
+
+-- Insert Products with images (PostgreSQL uses decode() for base64)
+-- Sample small JPEG images (1x1 pixel) - Base64 encoded
+INSERT INTO mstproduct (product_id, product_name, product_description, product_img, producttype_id, status) VALUES
+(1, 'Laptop Dell XPS 15', 'Laptop cao cấp với màn hình 15.6 inch 4K OLED, CPU Intel Core i7 thế hệ 13', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=', 'base64'), 
+ 1, '0'),
+(2, 'iPhone 15 Pro Max', 'Smartphone flagship với chip A17 Pro, camera 48MP, màn hình ProMotion 120Hz', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABIA/9k=', 'base64'), 
+ 1, '0'),
+(3, 'Samsung Galaxy S24 Ultra', 'Điện thoại Android cao cấp với bút S Pen, camera zoom 100x, màn hình Dynamic AMOLED', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAAMA/9k=', 'base64'), 
+ 1, '0'),
+(4, 'Áo sơ mi nam', 'Áo sơ mi công sở cao cấp, chất liệu cotton 100%, form slim fit', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAP8A/9k=', 'base64'), 
+ 2, '0'),
+(5, 'Quần jean nữ', 'Quần jean nữ skinny, co giãn 4 chiều, màu xanh nhạt', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=', 'base64'), 
+ 2, '0'),
+(6, 'Nồi cơm điện Philips', 'Nồi cơm điện 1.8L, công nghệ nấu 3D, lòng nồi chống dính', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABIA/9k=', 'base64'), 
+ 3, '0'),
+(7, 'Máy hút bụi Dyson V15', 'Máy hút bụi không dây, công suất hút mạnh, pin 60 phút', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAAMA/9k=', 'base64'), 
+ 3, '0'),
+(8, 'Sách Đắc Nhân Tâm', 'Sách kỹ năng sống bán chạy nhất mọi thời đại của Dale Carnegie', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAP8A/9k=', 'base64'), 
+ 4, '0'),
+(9, 'Sách Clean Code', 'Sách lập trình: A Handbook of Agile Software Craftsmanship by Robert C. Martin', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=', 'base64'), 
+ 4, '0'),
+(10, 'MacBook Pro M3', 'Laptop Apple với chip M3 Pro, 16GB RAM, SSD 512GB, màn hình Liquid Retina XDR', 
+ decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABIA/9k=', 'base64'), 
+ 1, '0');
+
+-- Insert Users
+INSERT INTO users (id, username, password, role, enabled) VALUES
+(1, 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMye6J6sVqjaG4V2LqKaT1tSYpLB0o0pYIq', 'ROLE_ADMIN', true),
+(2, 'user', '$2a$10$N9qo8uLOickgx2ZMRZoMye6J6sVqjaG4V2LqKaT1tSYpLB0o0pYIq', 'ROLE_USER', true);
+
+-- Insert some orders
+INSERT INTO trproductorder (order_id, product_id, quantity, user_id, order_date) VALUES
+(1, 1, 5, 1, CURRENT_TIMESTAMP),
+(2, 2, 3, 2, CURRENT_TIMESTAMP),
+(3, 3, 2, 1, CURRENT_TIMESTAMP),
+(4, 4, 10, 2, CURRENT_TIMESTAMP),
+(5, 5, 7, 1, CURRENT_TIMESTAMP),
+(6, 6, 4, 2, CURRENT_TIMESTAMP),
+(7, 1, 2, 2, CURRENT_TIMESTAMP),
+(8, 2, 1, 1, CURRENT_TIMESTAMP);
+
+-- Verify data
+SELECT product_id, product_name, LENGTH(product_img) as image_size_bytes FROM mstproduct;

@@ -259,10 +259,9 @@
                         <tr th:each="product, iterStat : ${searchResult.products}">
                             <td th:text="${searchResult.currentPage * 5 + iterStat.index + 1}">1</td>
                             <td>
-                                <img th:if="${product.productImg != null && !product.productImg.isEmpty()}"
-                                    th:src="${product.productImg}" alt="Product Image" class="product-img">
-                                <span th:if="${product.productImg == null || product.productImg.isEmpty()}">Không có
-                                    hình</span>
+                                <img th:if="${product.hasImage}" th:src="@{'/products/image/' + ${product.productId}}"
+                                    alt="Product Image" class="product-img">
+                                <span th:if="${!product.hasImage}">Không có hình</span>
                             </td>
                             <td th:text="${product.productId}">1</td>
                             <td th:text="${product.productName}">Product Name</td>
