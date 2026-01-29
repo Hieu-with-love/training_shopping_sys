@@ -23,8 +23,9 @@ public class MstProduct {
     @Column(name = "product_description", length = 400)
     private String productDescription;
     
+    @Lob
     @Column(name = "product_img")
-    private String productImg;
+    private byte[] productImg;
     
     @Column(name = "producttype_id")
     private Long producttypeId;

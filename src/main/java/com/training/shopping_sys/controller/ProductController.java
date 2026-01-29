@@ -1,16 +1,24 @@
 package com.training.shopping_sys.controller;
 
 import com.training.shopping_sys.dto.ProductSearchResultDTO;
+import com.training.shopping_sys.entity.MstProduct;
 import com.training.shopping_sys.entity.MstProductType;
+import com.training.shopping_sys.repository.MstProductRepository;
 import com.training.shopping_sys.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/products")
@@ -18,6 +26,7 @@ import java.util.List;
 public class ProductController {
     
     private final ProductService productService;
+    private final MstProductRepository productRepository;
     
     @GetMapping("/list")
     public String showProductList(
@@ -39,5 +48,28 @@ public class ProductController {
         model.addAttribute("searchResult", searchResult);
         
         return "product-list";
+    }
+    
+    /**
+     * Endpoint to serve product images as byte array
+     * @param productId The ID of the product
+     * @return ResponseEntity with image bytes and appropriate content type
+     */
+    @GetMapping("/image/{productId}")
+    public ResponseEntity<byte[]> getProductImage(@PathVariable Long productId) {
+        Optional<MstProduct> productOpt = productRepository.findById(productId);
+        
+        if (productOpt.isPresent() && productOpt.get().getProductImg() != null) {
+            byte[] imageBytes = productOpt.get().getProductImg();
+            
+            HttpHeaders headers = new HttpHeaders();
+            // Set content type based on image format (default to JPEG)
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentLength(imageBytes.length);
+            
+            return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
+        }
+        
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 }

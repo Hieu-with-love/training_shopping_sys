@@ -36,7 +36,8 @@ public class ProductService {
             dto.setProductId(((Number) result[0]).longValue());
             dto.setProductName((String) result[1]);
             dto.setProductDescription((String) result[2]);
-            dto.setProductImg((String) result[3]);
+            byte[] imageBytes = (byte[]) result[3];
+            dto.setHasImage(imageBytes != null && imageBytes.length > 0);
             dto.setProducttypeId(((Number) result[4]).longValue());
             dto.setProducttypeName((String) result[5]);
             dto.setTotalOrdered(((Number) result[6]).longValue());
