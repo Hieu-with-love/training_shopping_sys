@@ -21,3 +21,20 @@ spring:
     cache: false
     prefix: classpath:/templates/
     suffix: .html
+
+  # Static resources configuration
+  web:
+    resources:
+      static-locations: classpath:/static/,file:img/
+
+  # Multipart file upload configuration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      enabled: true
+
+# Image storage configuration
+image:
+  storage:
+    path: img/

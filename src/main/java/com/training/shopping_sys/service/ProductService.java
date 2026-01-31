@@ -5,10 +5,12 @@ import com.training.shopping_sys.dto.ProductSearchResultDTO;
 import com.training.shopping_sys.entity.MstProductType;
 import com.training.shopping_sys.repository.MstProductRepository;
 import com.training.shopping_sys.repository.MstProductTypeRepository;
+import com.training.shopping_sys.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -17,6 +19,7 @@ public class ProductService {
     
     private final MstProductRepository productRepository;
     private final MstProductTypeRepository productTypeRepository;
+    private final ImageUtil imageUtil;
     
     private static final int PAGE_SIZE = 5;
     
@@ -36,8 +39,18 @@ public class ProductService {
             dto.setProductId(((Number) result[0]).longValue());
             dto.setProductName((String) result[1]);
             dto.setProductDescription((String) result[2]);
+            
+            // result[3]: product_img (byte[])
             byte[] imageBytes = (byte[]) result[3];
-            dto.setHasImage(imageBytes != null && imageBytes.length > 0);
+            if (imageBytes != null && imageBytes.length > 0) {
+                dto.setHasImage(true);
+                // Set URL to serve image from /products/image/{id} endpoint
+                dto.setImageUrl("/products/image/" + dto.getProductId());
+            } else {
+                dto.setHasImage(false);
+                dto.setImageUrl(null);
+            }
+            
             dto.setProducttypeId(((Number) result[4]).longValue());
             dto.setProducttypeName((String) result[5]);
             dto.setTotalOrdered(((Number) result[6]).longValue());

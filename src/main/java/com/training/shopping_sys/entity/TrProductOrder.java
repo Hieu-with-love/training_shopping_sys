@@ -14,23 +14,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class TrProductOrder {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_id")
-    private Long orderId;
-    
-    @Column(name = "product_id")
-    private Long productId;
+    @EmbeddedId
+    private TrProductOrderKey id;
     
     @ManyToOne
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private MstProduct product;
     
-    @Column(name = "quantity")
-    private Integer quantity;
-    
-    @Column(name = "user_id")
-    private Long userId;
+    @Column(name = "order_product_amount")
+    private Integer orderProductAmount;
     
     @Column(name = "order_date")
     private LocalDateTime orderDate;

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <th:block th:fragment="scripts">
+        <!-- Common scripts can be added here -->
+        <th:block th:if="${extraScripts}">
+            <script th:utext="${extraScripts}"></script>
+        </th:block>
+    </th:block>
+</body>
+
+</html>

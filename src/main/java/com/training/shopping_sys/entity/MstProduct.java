@@ -23,8 +23,7 @@ public class MstProduct {
     @Column(name = "product_description", length = 400)
     private String productDescription;
     
-    @Lob
-    @Column(name = "product_img")
+    @Column(name = "product_img", columnDefinition = "bytea")
     private byte[] productImg;
     
     @Column(name = "producttype_id")
@@ -33,6 +32,9 @@ public class MstProduct {
     @ManyToOne
     @JoinColumn(name = "producttype_id", insertable = false, updatable = false)
     private MstProductType productType;
+    
+    @Column(name = "product_amount")
+    private Integer productAmount;
     
     @Column(name = "status", length = 1)
     private String status; // '0' = active, '1' = deleted

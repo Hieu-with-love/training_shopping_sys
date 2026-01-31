@@ -12,7 +12,7 @@ import java.util.List;
 public interface MstProductRepository extends JpaRepository<MstProduct, Long> {
     
     @Query(value = "SELECT p.product_id, p.product_name, p.product_description, p.product_img, " +
-            "p.producttype_id, pt.producttype_name, COALESCE(SUM(o.quantity), 0) as total_ordered " +
+            "p.producttype_id, pt.producttype_name, COALESCE(SUM(o.order_product_amount), 0) as total_ordered " +
             "FROM mstproduct p " +
             "INNER JOIN mstproducttype pt ON p.producttype_id = pt.producttype_id " +
             "LEFT JOIN trproductorder o ON p.product_id = o.product_id " +
@@ -20,8 +20,8 @@ public interface MstProductRepository extends JpaRepository<MstProduct, Long> {
             "AND pt.status != '1' " +
             "AND (:keyword IS NULL OR :keyword = '' OR p.product_name ILIKE %:keyword% OR p.product_description ILIKE %:keyword%) " +
             "AND (:producttypeId IS NULL OR p.producttype_id = :producttypeId) " +
-            "GROUP BY p.product_id, p.product_name, p.product_description, p.product_img, p.producttype_id, pt.producttype_name " +
-            "ORDER BY total_ordered ASC",
+            "GROUP BY p.product_id, p.product_name, p.product_description, p.producttype_id, pt.producttype_name " +
+            "ORDER BY total_ordered DESC",
             nativeQuery = true)
     List<Object[]> searchProducts(@Param("keyword") String keyword, 
                                    @Param("producttypeId") Long producttypeId);

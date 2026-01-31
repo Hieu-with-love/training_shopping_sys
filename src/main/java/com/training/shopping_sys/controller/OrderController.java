@@ -2,6 +2,7 @@ package com.training.shopping_sys.controller;
 
 import com.training.shopping_sys.entity.MstProduct;
 import com.training.shopping_sys.entity.TrProductOrder;
+import com.training.shopping_sys.entity.TrProductOrderKey;
 import com.training.shopping_sys.repository.MstProductRepository;
 import com.training.shopping_sys.repository.TrProductOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,16 +31,28 @@ public class OrderController {
     public String showOrderPage(
             @RequestParam Long productId,
             @RequestParam Integer quantity,
-            Model model) {
+            Model model,
+            RedirectAttributes redirectAttributes) {
         
         Optional<MstProduct> productOpt = productRepository.findById(productId);
         
         if (productOpt.isEmpty()) {
-            model.addAttribute("error", "Sản phẩm không tồn tại!");
+            redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
             return "redirect:/products/list";
         }
         
         MstProduct product = productOpt.get();
+        
+        // Validate stock availability
+        Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+        Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+        
+        if (quantity > availableStock) {
+            redirectAttributes.addFlashAttribute("error", 
+                String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
+                    product.getProductName(), availableStock));
+            return "redirect:/products/list";
+        }
         
         // Get current user
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -63,11 +76,39 @@ public class OrderController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             
+            // Validate product exists
+            Optional<MstProduct> productOpt = productRepository.findById(productId);
+            if (productOpt.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
+                return "redirect:/products/list";
+            }
+            
+            MstProduct product = productOpt.get();
+            
+            // Validate stock availability again before confirming
+            Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+            Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+            
+            if (quantity > availableStock) {
+                redirectAttributes.addFlashAttribute("error", 
+                    String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
+                        product.getProductName(), availableStock));
+                return "redirect:/products/list";
+            }
+            
+            // Generate order ID (can be improved with proper ID generation logic)
+            Long orderId = System.currentTimeMillis();
+            
+            // Create composite key
+            TrProductOrderKey orderKey = new TrProductOrderKey();
+            orderKey.setOrderId(orderId);
+            orderKey.setCustomerName(username);
+            orderKey.setProductId(productId);
+            
             // Create order
             TrProductOrder order = new TrProductOrder();
-            order.setProductId(productId);
-            order.setQuantity(quantity);
-            order.setUserId(1L); // TODO: Get real user ID from authentication
+            order.setId(orderKey);
+            order.setOrderProductAmount(quantity);
             order.setOrderDate(LocalDateTime.now());
             
             orderRepository.save(order);
