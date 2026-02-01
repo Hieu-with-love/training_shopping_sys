@@ -17,10 +17,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/orders")
@@ -32,13 +34,38 @@ public class OrderController {
     
     @PostMapping("/place")
     public String showOrderPage(
-            @RequestParam("products[0].productId") List<Long> productIds,
-            @RequestParam("products[0].quantity") List<Integer> quantities,
+            HttpServletRequest request,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "producttypeId", required = false) Long producttypeId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             Model model,
             RedirectAttributes redirectAttributes) {
+        
+        // Parse products từ request parameters
+        Map<String, String[]> params = request.getParameterMap();
+        List<Long> productIds = new ArrayList<>();
+        List<Integer> quantities = new ArrayList<>();
+        
+        // Tìm tất cả products[i].productId và products[i].quantity
+        int index = 0;
+        while (true) {
+            String productIdKey = "products[" + index + "].productId";
+            String quantityKey = "products[" + index + "].quantity";
+            
+            if (params.containsKey(productIdKey) && params.containsKey(quantityKey)) {
+                productIds.add(Long.parseLong(params.get(productIdKey)[0]));
+                quantities.add(Integer.parseInt(params.get(quantityKey)[0]));
+                index++;
+            } else {
+                break;
+            }
+        }
+        
+        // Kiểm tra có sản phẩm nào không
+        if (productIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Không có sản phẩm nào được chọn!");
+            return "redirect:/products/list";
+        }
         
         List<OrderItemDTO> orderItems = new ArrayList<>();
         
@@ -54,26 +81,26 @@ public class OrderController {
                 return "redirect:/products/list";
             }
             
-            MstProduct product = productOpt.get();
+            MstProduct mstProduct = productOpt.get();
             
             // Validate stock availability
             Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-            Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+            Integer availableStock = (mstProduct.getProductAmount() != null ? mstProduct.getProductAmount() : 0) - totalOrdered;
             
             if (quantity > availableStock) {
                 redirectAttributes.addFlashAttribute("error", 
                     String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                        product.getProductName(), availableStock));
+                        mstProduct.getProductName(), availableStock));
                 return "redirect:/products/list";
             }
             
             // Tạo OrderItemDTO
             OrderItemDTO item = new OrderItemDTO();
             item.setProductId(productId);
-            item.setProductName(product.getProductName());
+            item.setProductName(mstProduct.getProductName());
             item.setQuantity(quantity);
             item.setAvailableStock(availableStock);
-            item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
+            item.setProducttypeName(mstProduct.getProductType() != null ? mstProduct.getProductType().getProducttypeName() : "");
             
             orderItems.add(item);
         }
