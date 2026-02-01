@@ -159,21 +159,81 @@
                 border: 1px solid #ddd;
                 border-radius: 4px;
                 text-align: center;
+                transition: border-color 0.3s;
+            }
+
+            .quantity-input.error {
+                border-color: #dc3545;
+                background-color: #fff5f5;
+            }
+
+            .quantity-input:focus {
+                outline: none;
+                border-color: #007bff;
+            }
+
+            .quantity-wrapper {
+                position: relative;
+                display: inline-block;
+            }
+
+            .error-message {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                margin-top: 5px;
+                padding: 8px 12px;
+                background-color: #dc3545;
+                color: white;
+                font-size: 12px;
+                border-radius: 4px;
+                white-space: nowrap;
+                z-index: 1000;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                max-width: 300px;
+                white-space: normal;
+            }
+
+            .error-message::before {
+                content: '';
+                position: absolute;
+                bottom: 100%;
+                left: 20px;
+                border: 5px solid transparent;
+                border-bottom-color: #dc3545;
+            }
+
+            .error-message.show {
+                display: block;
             }
 
             .btn-order {
-                padding: 8px 16px;
+                padding: 12px 30px;
                 background-color: #28a745;
                 color: white;
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 14px;
+                font-size: 16px;
+                font-weight: 600;
                 transition: background-color 0.3s;
+                margin-top: 20px;
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
             }
 
             .btn-order:hover {
                 background-color: #218838;
+            }
+
+            .order-section {
+                text-align: center;
+                margin-top: 30px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
             }
 
             @media (max-width: 768px) {
@@ -238,7 +298,6 @@
                             <th>Loại sản phẩm</th>
                             <th>Mô tả</th>
                             <th>Số lượng đặt hàng</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -254,19 +313,26 @@
                             <td th:text="${product.producttypeName}">Product Type</td>
                             <td th:text="${product.productDescription}">Description</td>
                             <td>
-                                <input type="text" class="quantity-input" min="0" value="0" placeholder="0"
-                                    th:id="'quantity-' + ${product.productId}" th:data-product-id="${product.productId}"
-                                    th:data-product-name="${product.productName}" oninput="validateQuantityInput(this)"
-                                    onblur="validateQuantity(this)">
-                            </td>
-                            <td>
-                                <button class="btn-order" th:onclick="|orderProduct(${product.productId})|">
-                                    Đặt hàng
-                                </button>
+                                <div class="quantity-wrapper">
+                                    <input type="text" class="quantity-input" min="0" value="" placeholder="0"
+                                        th:id="'quantity-' + ${product.productId}"
+                                        th:data-product-id="${product.productId}"
+                                        th:data-product-name="${product.productName}"
+                                        oninput="handleQuantityInput(this)" onblur="validateQuantityOnBlur(this)"
+                                        onfocus="clearError(this)">
+                                    <div class="error-message" th:id="'error-' + ${product.productId}"></div>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- Single Order Button -->
+                <div class="order-section">
+                    <button class="btn-order" onclick="placeOrder()">
+                        Đặt hàng
+                    </button>
+                </div>
 
                 <!-- Pagination -->
                 <div class="pagination">
@@ -321,71 +387,182 @@
         </div>
 
         <script th:inline="javascript">
+            // Debounce function để tránh gọi API quá nhiều
+            let validationTimers = {};
+
             function resetForm() {
                 window.location.href = '/products/list';
             }
 
-            // Real-time validation while typing
-            function validateQuantityInput(input) {
-                const value = input.value;
-
-                // Remove any non-digit characters
-                const cleaned = value.replace(/[^\d]/g, '');
-
-                // If the cleaned value is different from the original, show alert and update value
-                if (value !== cleaned) {
-                    // Only show alert if user actually typed invalid characters
-                    if (value.length > 0) {
-                        alert('Số lượng đặt hàng không hợp lệ, xin hãy nhập lại. Chỉ được nhập số nguyên dương.');
+            // Restore quantities từ URL params khi quay lại từ Cancel
+            window.addEventListener('DOMContentLoaded', function () {
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.forEach((value, key) => {
+                    if (key.startsWith('qty_')) {
+                        const productId = key.substring(4); // Bỏ prefix 'qty_'
+                        const quantityInput = document.getElementById('quantity-' + productId);
+                        if (quantityInput) {
+                            quantityInput.value = value;
+                        }
                     }
-                    input.value = cleaned;
-                }
+                });
+            });
+
+            // Hiển thị error message inline
+            function showError(input, message) {
+                const productId = input.getAttribute('data-product-id');
+                const errorDiv = document.getElementById('error-' + productId);
+
+                input.classList.add('error');
+                errorDiv.textContent = message;
+                errorDiv.classList.add('show');
             }
 
-            async function validateQuantity(input) {
+            // Xóa error message
+            function clearError(input) {
+                const productId = input.getAttribute('data-product-id');
+                const errorDiv = document.getElementById('error-' + productId);
+
+                input.classList.remove('error');
+                errorDiv.classList.remove('show');
+                errorDiv.textContent = '';
+            }
+
+            // Chỉ clear error khi đang gõ - KHÔNG tự động clean input
+            function handleQuantityInput(input) {
+                // Clear error khi user đang sửa
+                clearError(input);
+            }
+
+            // Validate khi blur - kiểm tra đầy đủ
+            async function validateQuantityOnBlur(input) {
                 const productId = input.getAttribute('data-product-id');
                 const productName = input.getAttribute('data-product-name');
                 const quantity = input.value.trim();
 
-                // Check if quantity is empty
-                if (quantity === '' || quantity === '0') {
-                    return; // Allow empty or 0
-                }
+                // Xóa error cũ
+                clearError(input);
 
-                // Check if quantity is a valid integer
-                if (!Number.isInteger(Number(quantity)) || Number(quantity) < 0) {
-                    alert('Số lượng đặt hàng không hợp lệ, xin hãy nhập lại');
-                    input.focus();
+                // Nếu rỗng hoặc 0, không validate (cho phép)
+                if (quantity === '' || quantity === '0') {
                     return;
                 }
 
-                // Validate stock availability via API
-                try {
-                    const response = await fetch(`/products/validate-stock?productId=${productId}&quantity=${quantity}`);
-                    const data = await response.json();
-
-                    if (!data.valid) {
-                        alert("data from response" + data.message);
-                        input.focus();
-                    }
-                } catch (error) {
-                    console.error('Error validating stock:', error);
-                    alert('Có lỗi xảy ra khi kiểm tra số lượng sản phẩm');
+                // Kiểm tra format số nguyên
+                const numValue = Number(quantity);
+                if (!Number.isInteger(numValue) || numValue <= 0) {
+                    showError(input, 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại');
+                    return;
                 }
+
+                // Debounce API call - chỉ gọi sau 500ms không có thay đổi
+                if (validationTimers[productId]) {
+                    clearTimeout(validationTimers[productId]);
+                }
+
+                validationTimers[productId] = setTimeout(async () => {
+                    // Validate stock qua API
+                    try {
+                        const response = await fetch(`/products/validate-stock?productId=${productId}&quantity=${quantity}`);
+                        const data = await response.json();
+
+                        if (!data.valid) {
+                            showError(input, data.message);
+                        }
+                    } catch (error) {
+                        console.error('Error validating stock:', error);
+                        showError(input, 'Có lỗi xảy ra khi kiểm tra số lượng');
+                    }
+                }, 500);
             }
 
-            function orderProduct(productId) {
-                const quantityInput = document.getElementById('quantity-' + productId);
-                const quantity = quantityInput.value;
+            function placeOrder() {
+                // Thu thập tất cả sản phẩm có số lượng > 0
+                const allQuantityInputs = document.querySelectorAll('.quantity-input');
+                const selectedProducts = [];
 
-                if (!quantity || quantity <= 0) {
-                    alert('Vui lòng nhập số lượng hợp lệ!');
-                    quantityInput.focus();
+                allQuantityInputs.forEach(input => {
+                    const quantity = input.value.trim();
+                    const productId = input.getAttribute('data-product-id');
+                    const productName = input.getAttribute('data-product-name');
+
+                    // Kiểm tra nếu có số lượng hợp lệ và > 0
+                    if (quantity && quantity !== '' && quantity !== '0') {
+                        const numValue = Number(quantity);
+
+                        // Kiểm tra format
+                        if (!Number.isInteger(numValue) || numValue <= 0) {
+                            showError(input, 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại');
+                            input.focus();
+                            return;
+                        }
+
+                        // Kiểm tra nếu có error đang hiển thị
+                        const errorDiv = document.getElementById('error-' + productId);
+                        if (errorDiv.classList.contains('show')) {
+                            input.focus();
+                            return;
+                        }
+
+                        selectedProducts.push({
+                            productId: productId,
+                            productName: productName,
+                            quantity: numValue
+                        });
+                    }
+                });
+
+                // Kiểm tra có sản phẩm nào được chọn không
+                if (selectedProducts.length === 0) {
+                    alert('Xin hãy nhập số lượng đặt hàng cho ít nhất một sản phẩm');
                     return;
                 }
 
-                // Redirect to order page with product and quantity
-                window.location.href = `/orders/place?productId=${productId}&quantity=${quantity}`;
+                // Tạo form để submit nhiều sản phẩm
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/orders/place';
+
+                selectedProducts.forEach((product, index) => {
+                    const productIdInput = document.createElement('input');
+                    productIdInput.type = 'hidden';
+                    productIdInput.name = `products[${index}].productId`;
+                    productIdInput.value = product.productId;
+                    form.appendChild(productIdInput);
+
+                    const quantityInput = document.createElement('input');
+                    quantityInput.type = 'hidden';
+                    quantityInput.name = `products[${index}].quantity`;
+                    quantityInput.value = product.quantity;
+                    form.appendChild(quantityInput);
+                });
+
+                // Thêm search params để giữ lại khi Cancel
+                const urlParams = new URLSearchParams(window.location.search);
+                const keyword = urlParams.get('keyword') || '';
+                const producttypeId = urlParams.get('producttypeId') || '';
+                const page = urlParams.get('page') || '0';
+
+                const keywordInput = document.createElement('input');
+                keywordInput.type = 'hidden';
+                keywordInput.name = 'keyword';
+                keywordInput.value = keyword;
+                form.appendChild(keywordInput);
+
+                const typeInput = document.createElement('input');
+                typeInput.type = 'hidden';
+                typeInput.name = 'producttypeId';
+                typeInput.value = producttypeId;
+                form.appendChild(typeInput);
+
+                const pageInput = document.createElement('input');
+                pageInput.type = 'hidden';
+                pageInput.name = 'page';
+                pageInput.value = page;
+                form.appendChild(pageInput);
+
+                document.body.appendChild(form);
+                form.submit();
             }
         </script>
     </section>

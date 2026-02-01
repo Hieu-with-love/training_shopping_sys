@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -25,12 +26,12 @@ public class ImageService {
     private final MstProductRepository productRepository;
     private final ImageUtil imageUtil;
     
-    @Value("${image.storage.path:img/}")
+    @Value("${image.storage.path:uploads/products}")
     private String imageStoragePath;
     
     /**
      * Cập nhật ảnh cho sản phẩm từ MultipartFile
-     * Lưu file vào thư mục img/ và lưu byte[] vào DB
+     * Lưu file vào thư mục uploads/products và lưu byte[] vào DB
      * @param productId ID của sản phẩm
      * @param file File ảnh upload
      * @return true nếu cập nhật thành công
@@ -60,7 +61,7 @@ public class ImageService {
             
             // Get file extension
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String fileName = "product_" + productId + extension;
+            String fileName = "product_" + UUID.randomUUID() + extension;
             
             // Ensure directory exists
             Path directory = Paths.get(imageStoragePath);

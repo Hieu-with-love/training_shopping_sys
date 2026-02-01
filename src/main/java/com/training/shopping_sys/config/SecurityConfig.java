@@ -24,18 +24,28 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())  // Tắt CSRF cho development
                 .authorizeHttpRequests(auth -> auth
+                        // Cho phép truy cập Swagger UI và OpenAPI docs
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+                        // Cho phép truy cập login và static resources
                         .requestMatchers("/login", "/static/css/**", "/products/**").permitAll()
+                        // Cho phép truy cập orders (yêu cầu authentication)
+                        .requestMatchers("/orders/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .formLogin(form -> form.disable())
-//                .formLogin(form -> form
-//                        .loginPage("/login")
-//                        .defaultSuccessUrl("/products/list", true)
-//                        .failureUrl("/login?error")
-//                        .permitAll()
-//                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/products/list", true)
+                        .failureUrl("/login?error")
+                        .permitAll()
+                )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()

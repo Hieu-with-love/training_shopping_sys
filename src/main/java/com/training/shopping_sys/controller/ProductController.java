@@ -9,8 +9,16 @@ import com.training.shopping_sys.repository.TrProductOrderRepository;
 import com.training.shopping_sys.service.ImageService;
 import com.training.shopping_sys.service.ProductService;
 import com.training.shopping_sys.util.ImageUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,6 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +46,7 @@ import java.util.Optional;
 @Controller
 @RequestMapping("/products")
 @RequiredArgsConstructor
+@Tag(name = "Product Management", description = "APIs quản lý sản phẩm - Xem, tìm kiếm, upload ảnh")
 public class ProductController {
     
     private final ProductService productService;
@@ -44,7 +54,11 @@ public class ProductController {
     private final TrProductOrderRepository orderRepository;
     private final ImageService imageService;
     private final ImageUtil imageUtil;
-    
+
+    @Value("${image.storage.path:uploads/products}")
+    private String imageStoragePath;
+
+
     @GetMapping("/list")
     public String showProductList(
             @RequestParam(value = "keyword", required = false) String keyword,
@@ -79,28 +93,11 @@ public class ProductController {
             // Try to read from img/ folder first
             byte[] imageBytes = null;
             String contentType = "image/jpeg";
-            
-            // Try jpg first
-            Path jpgPath = Paths.get("img/product_" + productId + ".jpg");
-            if (Files.exists(jpgPath)) {
-                imageBytes = Files.readAllBytes(jpgPath);
-                contentType = "image/jpeg";
-            } else {
-                // Try png
-                Path pngPath = Paths.get("img/product_" + productId + ".png");
-                if (Files.exists(pngPath)) {
-                    imageBytes = Files.readAllBytes(pngPath);
-                    contentType = "image/png";
-                }
-            }
-            
-            // If not found in files, try database
-            if (imageBytes == null) {
-                Optional<MstProduct> productOpt = productRepository.findById(productId);
-                if (productOpt.isPresent() && productOpt.get().getProductImg() != null) {
-                    imageBytes = productOpt.get().getProductImg();
-                    contentType = imageUtil.detectContentTypeFromBytes(imageBytes);
-                }
+
+            Optional<MstProduct> productOpt = productRepository.findById(productId);
+            if (productOpt.isPresent() && productOpt.get().getProductImg() != null) {
+                imageBytes = productOpt.get().getProductImg();
+                contentType = imageUtil.detectContentTypeFromBytes(imageBytes);
             }
             
             if (imageBytes != null) {
@@ -125,10 +122,17 @@ public class ProductController {
      * @param quantity The requested quantity
      * @return StockValidationDTO with validation result
      */
+    @Operation(summary = "Kiểm tra tồn kho", description = "Kiểm tra số lượng tồn kho có sẵn của sản phẩm")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Kiểm tra thành công"),
+        @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ")
+    })
     @GetMapping("/validate-stock")
     @ResponseBody
     public ResponseEntity<StockValidationDTO> validateStock(
+            @Parameter(description = "ID sản phẩm cần kiểm tra", required = true, example = "1")
             @RequestParam Long productId,
+            @Parameter(description = "Số lượng muốn mua", required = true, example = "5")
             @RequestParam Integer quantity) {
         
         Optional<MstProduct> productOpt = productRepository.findById(productId);
@@ -166,11 +170,26 @@ public class ProductController {
      * @param file File ảnh (png/jpg)
      * @return Response với status và message
      */
-    @PostMapping("/upload-image/{productId}")
+    @Operation(
+        summary = "Upload ảnh sản phẩm",
+        description = "Upload file ảnh (PNG/JPG) cho sản phẩm. File sẽ được lưu vào database."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Upload thành công"),
+        @ApiResponse(responseCode = "400", description = "File không hợp lệ hoặc product không tồn tại"),
+        @ApiResponse(responseCode = "401", description = "Chưa xác thực")
+    })
+    @PostMapping(value = "/upload-image/{productId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseBody
     public ResponseEntity<Map<String, Object>> uploadProductImage(
+            @Parameter(description = "ID của sản phẩm cần upload ảnh", required = true, example = "1")
             @PathVariable Long productId,
-            @RequestParam("file") MultipartFile file) {
+            @Parameter(
+                description = "File ảnh sản phẩm (PNG, JPG, JPEG)",
+                required = true,
+                content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            )
+            @RequestPart("file") MultipartFile file) {
         
         Map<String, Object> response = new HashMap<>();
         
@@ -192,6 +211,13 @@ public class ProductController {
      * Quy ước tên file: product_{productId}.jpg hoặc product_{productId}.png
      * @return Response với số lượng ảnh đã load
      */
+    @Operation(
+        summary = "Load ảnh từ thư mục img",
+        description = "Đọc tất cả ảnh từ thư mục img/ theo quy ước tên file product_{productId}.jpg và lưu vào database"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Load ảnh thành công")
+    })
     @PostMapping("/load-images")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> loadImagesFromFolder() {

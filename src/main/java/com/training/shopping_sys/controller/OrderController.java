@@ -1,5 +1,6 @@
 package com.training.shopping_sys.controller;
 
+import com.training.shopping_sys.dto.OrderItemDTO;
 import com.training.shopping_sys.entity.MstProduct;
 import com.training.shopping_sys.entity.TrProductOrder;
 import com.training.shopping_sys.entity.TrProductOrderKey;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -27,8 +30,72 @@ public class OrderController {
     private final MstProductRepository productRepository;
     private final TrProductOrderRepository orderRepository;
     
-    @GetMapping("/place")
+    @PostMapping("/place")
     public String showOrderPage(
+            @RequestParam("products[0].productId") List<Long> productIds,
+            @RequestParam("products[0].quantity") List<Integer> quantities,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "producttypeId", required = false) Long producttypeId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        
+        List<OrderItemDTO> orderItems = new ArrayList<>();
+        
+        // Xử lý từng sản phẩm
+        for (int i = 0; i < productIds.size(); i++) {
+            Long productId = productIds.get(i);
+            Integer quantity = quantities.get(i);
+            
+            Optional<MstProduct> productOpt = productRepository.findById(productId);
+            
+            if (productOpt.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
+                return "redirect:/products/list";
+            }
+            
+            MstProduct product = productOpt.get();
+            
+            // Validate stock availability
+            Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+            Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+            
+            if (quantity > availableStock) {
+                redirectAttributes.addFlashAttribute("error", 
+                    String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
+                        product.getProductName(), availableStock));
+                return "redirect:/products/list";
+            }
+            
+            // Tạo OrderItemDTO
+            OrderItemDTO item = new OrderItemDTO();
+            item.setProductId(productId);
+            item.setProductName(product.getProductName());
+            item.setQuantity(quantity);
+            item.setAvailableStock(availableStock);
+            item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
+            
+            orderItems.add(item);
+        }
+        
+        // Get current user
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        model.addAttribute("orderItems", orderItems);
+        model.addAttribute("username", username);
+        // Lưu search params để truyền lại khi Cancel
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("producttypeId", producttypeId);
+        model.addAttribute("page", page);
+        model.addAttribute("productIds", productIds);
+        model.addAttribute("quantities", quantities);
+        
+        return "order";
+    }
+    
+    @GetMapping("/place")
+    public String showOrderPageSingle(
             @RequestParam Long productId,
             @RequestParam Integer quantity,
             Model model,
@@ -54,12 +121,20 @@ public class OrderController {
             return "redirect:/products/list";
         }
         
+        List<OrderItemDTO> orderItems = new ArrayList<>();
+        OrderItemDTO item = new OrderItemDTO();
+        item.setProductId(productId);
+        item.setProductName(product.getProductName());
+        item.setQuantity(quantity);
+        item.setAvailableStock(availableStock);
+        item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
+        orderItems.add(item);
+        
         // Get current user
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         
-        model.addAttribute("product", product);
-        model.addAttribute("quantity", quantity);
+        model.addAttribute("orderItems", orderItems);
         model.addAttribute("username", username);
         
         return "order";
@@ -67,8 +142,8 @@ public class OrderController {
     
     @PostMapping("/confirm")
     public String confirmOrder(
-            @RequestParam Long productId,
-            @RequestParam Integer quantity,
+            @RequestParam("productIds") List<Long> productIds,
+            @RequestParam("quantities") List<Integer> quantities,
             RedirectAttributes redirectAttributes) {
         
         try {
@@ -76,57 +151,68 @@ public class OrderController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             
-            // Validate product exists
-            Optional<MstProduct> productOpt = productRepository.findById(productId);
-            if (productOpt.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
-                return "redirect:/products/list";
-            }
-            
-            MstProduct product = productOpt.get();
-            
-            // Validate stock availability again before confirming
-            Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-            Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
-            
-            if (quantity > availableStock) {
-                redirectAttributes.addFlashAttribute("error", 
-                    String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                        product.getProductName(), availableStock));
-                return "redirect:/products/list";
-            }
-            
-            // Generate order ID (can be improved with proper ID generation logic)
+            // Generate order ID một lần cho tất cả sản phẩm
             Long orderId = System.currentTimeMillis();
             
-            // Create composite key
-            TrProductOrderKey orderKey = new TrProductOrderKey();
-            orderKey.setOrderId(orderId);
-            orderKey.setCustomerName(username);
-            orderKey.setProductId(productId);
-            
-            // Create order
-            TrProductOrder order = new TrProductOrder();
-            order.setId(orderKey);
-            order.setOrderProductAmount(quantity);
-            order.setOrderDate(LocalDateTime.now());
-            
-            orderRepository.save(order);
+            // Xử lý từng sản phẩm
+            for (int i = 0; i < productIds.size(); i++) {
+                Long productId = productIds.get(i);
+                Integer quantity = quantities.get(i);
+                
+                // Validate product exists
+                Optional<MstProduct> productOpt = productRepository.findById(productId);
+                if (productOpt.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
+                    return "redirect:/products/list";
+                }
+                
+                MstProduct product = productOpt.get();
+                
+                // Validate stock availability again before confirming
+                Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+                Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+                
+                if (quantity > availableStock) {
+                    redirectAttributes.addFlashAttribute("error", 
+                        String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
+                            product.getProductName(), availableStock));
+                    return "redirect:/products/list";
+                }
+                
+                // Create composite key
+                TrProductOrderKey orderKey = new TrProductOrderKey();
+                orderKey.setOrderId(orderId);
+                orderKey.setCustomerName(username);
+                orderKey.setProductId(productId);
+                
+                // Create order
+                TrProductOrder order = new TrProductOrder();
+                order.setId(orderKey);
+                order.setOrderProductAmount(quantity);
+                order.setOrderDate(LocalDateTime.now());
+                
+                orderRepository.save(order);
+            }
             
             redirectAttributes.addFlashAttribute("message", 
                 "Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận.");
             
+            // Redirect về init state (không có search params)
             return "redirect:/orders/success";
             
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", 
                 "Có lỗi xảy ra khi đặt hàng: " + e.getMessage());
+            // Redirect về init state khi có lỗi
             return "redirect:/products/list";
         }
     }
     
     @GetMapping("/success")
-    public String orderSuccess() {
+    public String orderSuccess(RedirectAttributes redirectAttributes) {
+        // Sau khi success, về trang init (không params)
+        redirectAttributes.addFlashAttribute("successMessage", 
+            "Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận.");
         return "order-success";
     }
 }

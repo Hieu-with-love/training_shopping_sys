@@ -38,12 +38,35 @@
                 flex-grow: 1;
             }
 
-            .product-image {
-                width: 150px;
-                height: 150px;
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                background-color: white;
+            }
+
+            th,
+            td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+
+            th {
+                background-color: #007bff;
+                color: white;
+                font-weight: 600;
+            }
+
+            tr:hover {
+                background-color: #f8f9fa;
+            }
+
+            .product-img {
+                width: 60px;
+                height: 60px;
                 object-fit: cover;
-                border-radius: 8px;
-                border: 2px solid #dee2e6;
+                border-radius: 4px;
             }
 
             .button-group {
@@ -71,15 +94,27 @@
                 background-color: #5a6268;
             }
 
-            .total-price {
-                font-size: 24px;
-                font-weight: bold;
-                color: #28a745;
-                text-align: right;
-                padding: 20px;
+            .summary-section {
                 background-color: #d4edda;
+                padding: 20px;
                 border-radius: 8px;
                 margin-top: 20px;
+            }
+
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                font-size: 18px;
+            }
+
+            .summary-row.total {
+                font-weight: bold;
+                font-size: 24px;
+                color: #28a745;
+                border-top: 2px solid #28a745;
+                padding-top: 15px;
+                margin-top: 15px;
             }
 
             @media (max-width: 768px) {
@@ -100,6 +135,15 @@
                 .btn {
                     width: 100%;
                 }
+
+                table {
+                    font-size: 12px;
+                }
+
+                th,
+                td {
+                    padding: 8px;
+                }
             }
         </style>
     </th:block>
@@ -114,51 +158,88 @@
                 <span class="info-label">Người đặt hàng:</span>
                 <span class="info-value" th:text="${username}">User</span>
             </div>
+        </div>
 
-            <div class="info-row">
-                <span class="info-label">Hình ảnh sản phẩm:</span>
-                <div class="info-value">
-                    <img th:if="${product.productImg != null}" th:src="@{'/products/image/' + ${product.productId}}"
-                        alt="Product Image" class="product-image">
-                    <span th:if="${product.productImg == null}">Không có hình ảnh</span>
-                </div>
-            </div>
+        <!-- Bảng danh sách sản phẩm -->
+        <h2>Danh sách sản phẩm đặt hàng</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Hình ảnh</th>
+                    <th>Mã sản phẩm</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Loại sản phẩm</th>
+                    <th>Số lượng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="item, iterStat : ${orderItems}">
+                    <td th:text="${iterStat.index + 1}">1</td>
+                    <td>
+                        <img th:src="@{'/products/image/' + ${item.productId}}" alt="Product Image" class="product-img"
+                            onerror="this.style.display='none'">
+                    </td>
+                    <td th:text="${item.productId}">1</td>
+                    <td th:text="${item.productName}">Product Name</td>
+                    <td th:text="${item.producttypeName}">Category</td>
+                    <td th:text="${item.quantity}">0</td>
+                </tr>
+            </tbody>
+        </table>
 
-            <div class="info-row">
-                <span class="info-label">Mã sản phẩm:</span>
-                <span class="info-value" th:text="${product.productId}">1</span>
+        <!-- Tổng kết -->
+        <div class="summary-section">
+            <div class="summary-row">
+                <span>Tổng số sản phẩm:</span>
+                <span th:text="${orderItems.size()}">0</span>
             </div>
-
-            <div class="info-row">
-                <span class="info-label">Tên sản phẩm:</span>
-                <span class="info-value" th:text="${product.productName}">Product Name</span>
+            <div class="summary-row">
+                <span>Tổng số lượng:</span>
+                <span th:text="${#aggregates.sum(orderItems.![quantity])}">0</span>
             </div>
-
-            <div class="info-row">
-                <span class="info-label">Loại sản phẩm:</span>
-                <span class="info-value" th:text="${product.productType?.producttypeName}">Category</span>
-            </div>
-
-            <div class="info-row">
-                <span class="info-label">Mô tả:</span>
-                <span class="info-value" th:text="${product.productDescription}">Description</span>
-            </div>
-
-            <div class="info-row">
-                <span class="info-label">Số lượng:</span>
-                <span class="info-value" th:text="${quantity}">0</span>
-            </div>
+        </div>
         </div>
 
         <form method="post" th:action="@{/orders/confirm}">
-            <input type="hidden" name="productId" th:value="${product.productId}">
-            <input type="hidden" name="quantity" th:value="${quantity}">
+            <input type="hidden" th:each="item, iterStat : ${orderItems}"
+                th:name="'productIds[' + ${iterStat.index} + ']'" th:value="${item.productId}">
+            <input type="hidden" th:each="item, iterStat : ${orderItems}"
+                th:name="'quantities[' + ${iterStat.index} + ']'" th:value="${item.quantity}">
 
             <div class="button-group">
                 <button type="submit" class="btn-confirm">✓ Xác nhận đặt hàng</button>
-                <a href="/products/list" class="btn btn-cancel">✗ Hủy</a>
+                <button type="button" class="btn btn-cancel" onclick="cancelOrder()">✗ Hủy</button>
             </div>
         </form>
+
+        <script th:inline="javascript">
+            function cancelOrder() {
+                // Lấy search params từ server
+                const keyword = /*[[${keyword}]]*/ '';
+                const producttypeId = /*[[${producttypeId}]]*/ '';
+                const page = /*[[${page}]]*/ 0;
+                const productIds = /*[[${productIds}]]*/[];
+                const quantities = /*[[${quantities}]]*/[];
+
+                // Build URL với search params
+                let url = '/products/list?';
+                if (keyword) {
+                    url += 'keyword=' + encodeURIComponent(keyword) + '&';
+                }
+                if (producttypeId) {
+                    url += 'producttypeId=' + producttypeId + '&';
+                }
+                url += 'page=' + page;
+
+                // Thêm quantities vào URL để restore
+                productIds.forEach((id, index) => {
+                    url += '&qty_' + id + '=' + quantities[index];
+                });
+
+                window.location.href = url;
+            }
+        </script>
     </section>
 </body>
 

@@ -37,4 +37,19 @@ spring:
 # Image storage configuration
 image:
   storage:
-    path: img/
+    path: uploads/products
+
+# Swagger/OpenAPI configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+    filter: true
