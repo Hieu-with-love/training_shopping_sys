@@ -8,14 +8,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Image Utility Class.
+ * 
+ * <p>Provides utility methods for image handling including:
+ * - Reading images from file system
+ * - Validating image file formats
+ * - Detecting content types from file extensions and magic bytes
+ * </p>
+ * 
+ * <p>Supports common image formats: PNG, JPEG, GIF, WebP.</p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Slf4j
 @Component
 public class ImageUtil {
     
     /**
-     * Đọc ảnh từ file path
-     * @param imagePath Đường dẫn tới file ảnh
-     * @return byte array của ảnh hoặc null nếu lỗi
+     * Read image from file path.
+     * 
+     * @param imagePath Absolute or relative path to image file
+     * @return Byte array of image data, or null if file not found or error occurs
      */
     public byte[] readImageFromFile(String imagePath) {
         try {
@@ -33,9 +49,13 @@ public class ImageUtil {
     }
     
     /**
-     * Đọc ảnh từ thư mục img với tên file
-     * @param fileName Tên file (ví dụ: product1.jpg)
-     * @return byte array của ảnh hoặc null nếu lỗi
+     * Read image from img folder.
+     * 
+     * <p>Convenience method to read images from the img/ directory.
+     * Prepends "img/" to the filename.</p>
+     * 
+     * @param fileName File name (e.g., "product_1.jpg")
+     * @return Byte array of image data, or null if not found
      */
     public byte[] readImageFromImgFolder(String fileName) {
         String imgFolderPath = "img/" + fileName;
@@ -43,9 +63,10 @@ public class ImageUtil {
     }
     
     /**
-     * Validate file extension
-     * @param fileName Tên file
-     * @return true nếu là png/jpg/jpeg
+     * Validate if file has valid image extension.
+     * 
+     * @param fileName File name to validate
+     * @return true if extension is .png, .jpg, or .jpeg (case-insensitive)
      */
     public boolean isValidImageFile(String fileName) {
         if (fileName == null || fileName.isEmpty()) {
@@ -58,9 +79,10 @@ public class ImageUtil {
     }
     
     /**
-     * Get content type từ file name
-     * @param fileName Tên file
-     * @return Content type string
+     * Get MIME content type from file extension.
+     * 
+     * @param fileName File name with extension
+     * @return MIME type string ("image/png", "image/jpeg", or "application/octet-stream")
      */
     public String getContentType(String fileName) {
         if (fileName == null) {
@@ -76,9 +98,13 @@ public class ImageUtil {
     }
     
     /**
-     * Detect content type từ byte array dựa vào magic bytes
-     * @param imageBytes Byte array của ảnh
-     * @return Content type string
+     * Detect content type from byte array using magic bytes.
+     * 
+     * <p>Examines the first few bytes of the image data to determine
+     * the file format. Supports PNG, JPEG, GIF, and WebP detection.</p>
+     * 
+     * @param imageBytes Byte array of image data
+     * @return MIME type string based on detected format, defaults to "image/jpeg"
      */
     public String detectContentTypeFromBytes(byte[] imageBytes) {
         if (imageBytes == null || imageBytes.length < 8) {
@@ -128,9 +154,13 @@ public class ImageUtil {
     }
     
     /**
-     * Get MediaType từ byte array
-     * @param imageBytes Byte array của ảnh
-     * @return MediaType object
+     * Get Spring MediaType from byte array.
+     * 
+     * <p>Converts detected content type string to Spring's MediaType object.
+     * Useful for HTTP responses.</p>
+     * 
+     * @param imageBytes Byte array of image data
+     * @return Spring MediaType object
      */
     public org.springframework.http.MediaType getMediaTypeFromBytes(byte[] imageBytes) {
         String contentType = detectContentTypeFromBytes(imageBytes);

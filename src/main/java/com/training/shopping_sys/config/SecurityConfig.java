@@ -13,6 +13,26 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Security Configuration.
+ * 
+ * <p>Configures Spring Security for the shopping system including:
+ * - HTTP request authorization rules
+ * - Form-based login configuration
+ * - Password encoding with BCrypt
+ * - User authentication provider
+ * </p>
+ * 
+ * <p>Security rules:
+ * - Public access: Login page, static resources, Swagger UI, product APIs
+ * - Authenticated access: Order operations
+ * - CSRF disabled for development
+ * </p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -20,6 +40,20 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
 
+    /**
+     * Configure security filter chain.
+     * 
+     * <p>Defines authorization rules for different URL patterns:
+     * - Permits public access to Swagger, login, and product endpoints
+     * - Requires authentication for order operations
+     * - Configures form login with custom success/failure URLs
+     * - Configures logout behavior
+     * </p>
+     * 
+     * @param http HttpSecurity object to configure
+     * @return Configured SecurityFilterChain
+     * @throws Exception if configuration fails
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -54,11 +88,27 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Configure password encoder.
+     * 
+     * <p>Uses BCrypt hashing algorithm for password encryption.
+     * BCrypt is a strong, adaptive hashing function designed for passwords.</p>
+     * 
+     * @return BCryptPasswordEncoder instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configure authentication provider.
+     * 
+     * <p>Creates a DAO-based authentication provider that uses
+     * the custom UserDetailsService and password encoder.</p>
+     * 
+     * @return Configured DaoAuthenticationProvider
+     */
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -67,6 +117,15 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Configure authentication manager.
+     * 
+     * <p>Exposes the AuthenticationManager bean for programmatic authentication.</p>
+     * 
+     * @param config Authentication configuration
+     * @return AuthenticationManager instance
+     * @throws Exception if configuration fails
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();

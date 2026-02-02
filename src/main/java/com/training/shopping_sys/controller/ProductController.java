@@ -42,6 +42,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Product Controller.
+ * 
+ * <p>Handles HTTP requests related to product management including:
+ * product listing, search, image upload, and stock validation.</p>
+ * 
+ * <p>This controller provides both web pages (returning Thymeleaf templates)
+ * and RESTful API endpoints (returning JSON) for product operations.</p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Slf4j
 @Controller
 @RequestMapping("/products")
@@ -58,7 +71,18 @@ public class ProductController {
     @Value("${image.storage.path:uploads/products}")
     private String imageStoragePath;
 
-
+    /**
+     * Display product list page with search functionality.
+     * 
+     * <p>Shows all active product types and performs product search
+     * based on keyword and/or product type. Supports pagination.</p>
+     *
+     * @param keyword Search keyword for product name (optional)
+     * @param producttypeId Filter by product type ID (optional)
+     * @param page Page number for pagination (default: 0)
+     * @param model Spring MVC Model to pass data to view
+     * @return Thymeleaf template name "product-list"
+     */
     @GetMapping("/list")
     public String showProductList(
             @RequestParam(value = "keyword", required = false) String keyword,
@@ -82,10 +106,14 @@ public class ProductController {
     }
     
     /**
-     * Endpoint to serve product images
-     * Ưu tiên đọc từ file img/, nếu không có thì đọc từ DB
+     * Serve product images from database.
+     * 
+     * <p>Retrieves product image bytes from database and returns them
+     * with appropriate content type and caching headers. Supports
+     * JPEG, PNG, and other image formats.</p>
+     * 
      * @param productId The ID of the product
-     * @return ResponseEntity with image bytes and appropriate content type
+     * @return ResponseEntity with image bytes and HTTP headers, or 404 if not found
      */
     @GetMapping("/image/{productId}")
     public ResponseEntity<byte[]> getProductImage(@PathVariable Long productId) {
@@ -117,10 +145,15 @@ public class ProductController {
     }
     
     /**
-     * API endpoint to validate stock availability
-     * @param productId The ID of the product
-     * @param quantity The requested quantity
-     * @return StockValidationDTO with validation result
+     * Validate stock availability for a product.
+     * 
+     * <p>Checks if the requested quantity is available in stock by
+     * calculating: available stock = product amount - total ordered amount.
+     * Returns validation result with availability status and message.</p>
+     * 
+     * @param productId The ID of the product to validate
+     * @param quantity The requested quantity to check
+     * @return ResponseEntity containing StockValidationDTO with validation result
      */
     @Operation(summary = "Kiểm tra tồn kho", description = "Kiểm tra số lượng tồn kho có sẵn của sản phẩm")
     @ApiResponses(value = {
@@ -165,10 +198,15 @@ public class ProductController {
     }
     
     /**
-     * API endpoint để upload ảnh cho sản phẩm
-     * @param productId ID của sản phẩm
-     * @param file File ảnh (png/jpg)
-     * @return Response với status và message
+     * Upload product image to database.
+     * 
+     * <p>Accepts multipart file upload (PNG/JPG) and stores the image
+     * in the database as binary data. The image is compressed before storage
+     * to optimize database size.</p>
+     * 
+     * @param productId ID of the product to update
+     * @param file Multipart image file (PNG/JPG/JPEG)
+     * @return ResponseEntity with success status and message
      */
     @Operation(
         summary = "Upload ảnh sản phẩm",
@@ -207,9 +245,13 @@ public class ProductController {
     }
     
     /**
-     * API endpoint để load ảnh từ thư mục img cho tất cả sản phẩm
-     * Quy ước tên file: product_{productId}.jpg hoặc product_{productId}.png
-     * @return Response với số lượng ảnh đã load
+     * Load images from file system to database.
+     * 
+     * <p>Bulk loads product images from the img/ folder following naming
+     * convention: product_{productId}.jpg or product_{productId}.png.
+     * Images are read from files and stored in database.</p>
+     * 
+     * @return ResponseEntity with count of successfully loaded images
      */
     @Operation(
         summary = "Load ảnh từ thư mục img",

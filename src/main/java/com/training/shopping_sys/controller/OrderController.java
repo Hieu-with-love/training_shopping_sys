@@ -24,6 +24,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 
+/**
+ * Order Controller.
+ * 
+ * <p>Handles HTTP requests related to order processing including:
+ * order placement, confirmation, and success pages. Validates stock
+ * availability before creating orders.</p>
+ * 
+ * <p>Orders are associated with authenticated users and include
+ * timestamp tracking. Supports both single and multiple product orders.</p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Controller
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -32,6 +46,21 @@ public class OrderController {
     private final MstProductRepository productRepository;
     private final TrProductOrderRepository orderRepository;
     
+    /**
+     * Display order confirmation page for multiple products.
+     * 
+     * <p>Processes order request from product list page, validates stock
+     * availability for each product, and displays order confirmation form.
+     * Preserves search parameters for cancel navigation.</p>
+     * 
+     * @param request HTTP request containing product IDs and quantities
+     * @param keyword Search keyword to preserve (optional)
+     * @param producttypeId Product type filter to preserve (optional)
+     * @param page Page number to preserve
+     * @param model Spring MVC Model to pass data to view
+     * @param redirectAttributes Attributes for redirect scenarios
+     * @return Template name "order" or redirect to product list on error
+     */
     @PostMapping("/place")
     public String showOrderPage(
             HttpServletRequest request,
@@ -121,6 +150,18 @@ public class OrderController {
         return "order";
     }
     
+    /**
+     * Display order confirmation page for a single product.
+     * 
+     * <p>Simpler version of order placement for single product orders.
+     * Validates stock availability and displays confirmation form.</p>
+     * 
+     * @param productId ID of the product to order
+     * @param quantity Quantity to order
+     * @param model Spring MVC Model to pass data to view
+     * @param redirectAttributes Attributes for redirect scenarios
+     * @return Template name "order" or redirect to product list on error
+     */
     @GetMapping("/place")
     public String showOrderPageSingle(
             @RequestParam Long productId,
@@ -167,6 +208,18 @@ public class OrderController {
         return "order";
     }
     
+    /**
+     * Confirm and process the order.
+     * 
+     * <p>Creates order records in the database for all selected products.
+     * Performs final stock validation before saving. All products in a
+     * single order share the same order ID (timestamp-based).</p>
+     * 
+     * @param productIds List of product IDs to order
+     * @param quantities List of quantities corresponding to each product
+     * @param redirectAttributes Attributes for success/error messages
+     * @return Redirect to success page or product list on error
+     */
     @PostMapping("/confirm")
     public String confirmOrder(
             @RequestParam("productIds") List<Long> productIds,
@@ -235,6 +288,15 @@ public class OrderController {
         }
     }
     
+    /**
+     * Display order success page.
+     * 
+     * <p>Shows confirmation message after successful order placement.
+     * Redirects user to a clean state without search parameters.</p>
+     * 
+     * @param redirectAttributes Attributes for success message
+     * @return Template name "order-success"
+     */
     @GetMapping("/success")
     public String orderSuccess(RedirectAttributes redirectAttributes) {
         // Sau khi success, về trang init (không params)

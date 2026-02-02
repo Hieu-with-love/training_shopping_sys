@@ -1,167 +1,98 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - Shopping System</title>
+    <title>Login Page</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <!-- Internal CSS for login page -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            height: 100vh;
+            padding: 0 10px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            position: relative;
+            justify-content: center;
+            background-color: rgba(184, 232, 236);
+        }
+
+        .login-title {
+            font-weight: bold;
         }
 
         .login-container {
-            background: white;
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 400px;
-            margin-bottom: 80px;
+            max-width: 450px;
+            gap: 10px;
         }
 
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
+        .btn-group {
+            display: flex;
+            gap: 100px;
         }
 
-        .login-header h1 {
-            color: #333;
-            font-size: 28px;
-            margin-bottom: 10px;
+        .btn-box {
+            display: flex;
+            flex: 1;
+            width: auto;
+            justify-content: center;
         }
 
-        .login-header p {
-            color: #666;
-            font-size: 14px;
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #333;
-            font-weight: 500;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .footer-text {
-            text-align: center;
-            color: white;
-            font-size: 12px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 15px 0;
-            border-top: 1px solid rgba(0, 0, 0);
-        }
-
-        .footer-text p {
-            margin: 0;
+        .form-row label {
+            width: 140px;
+            margin-right: 10px;
+            margin-bottom: 0;
+            text-align: left;
         }
     </style>
 </head>
 
 <body>
     <div class="login-container">
-        <div class="login-header">
-            <h1>🛍️ Shopping System</h1>
-            <p>Đăng nhập để tiếp tục</p>
+        <h1 class="login-title text-center text-primary">ĐĂNG NHẬP</h1>
+        <!-- Error message -->
+        <div class="text-danger d-flex justify-content-center me-1" id="errorMessage">
+            <p th:if="${param.error != null}" th:text="${param.error}"></p>
         </div>
-
-        <div th:if="${error}" class="alert alert-danger">
-            <span th:text="${error}"></span>
-        </div>
-
-        <div th:if="${message}" class="alert alert-success">
-            <span th:text="${message}"></span>
-        </div>
-
-        <form th:action="@{/login}" method="post">
-            <div class="form-group">
-                <label for="username">Tên đăng nhập</label>
-                <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required autofocus>
+        <!-- Login form -->
+        <form th:action="@{/login}" method="post" class="">
+            <div class="form-row">
+                <label for="username" class="text-end">Tên đăng nhập:</label>
+                <input type="text" name="username" id="username" maxlength="8" autofocus>
             </div>
-
-            <div class="form-group">
-                <label for="password">Mật khẩu</label>
-                <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required>
+            <div class="form-row">
+                <label for="password" class="text-end">Mật khẩu:</label>
+                <input type="password" name="password" id="password" maxlength="8">
             </div>
-
-            <button type="submit" class="btn-login">Đăng nhập</button>
+            <!-- Button and action -->
+            <div class="btn-group">
+                <button type="submit" name="action" value="Login" class="btn-box text-center">Đăng nhập</button>
+                <button type="button" class="btn-box" id="clearBtn" onclick="clearForm()">Xóa</button>
+            </div>
         </form>
     </div>
-
-    <div class="footer-text">
-        <p>Demo login - Spring Security</p>
-    </div>
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        function clearForm() {
+            /* Reset tất cả input trong form và cả lỗi đã hiển thị */
+            document.querySelector('form').reset();
+            document.getElementById("errorMessage").style.display = 'none';
+        }
+    </script>
 </body>
 
 </html>

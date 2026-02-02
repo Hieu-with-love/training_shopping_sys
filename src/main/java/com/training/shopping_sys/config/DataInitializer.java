@@ -7,6 +7,22 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Data Initializer.
+ * 
+ * <p>Initializes default user accounts on application startup.
+ * Runs once when the application starts and creates test users
+ * if they don't already exist in the database.</p>
+ * 
+ * <p>Default users created:
+ * - admin/admin123 (ROLE_ADMIN)
+ * - user/user123 (ROLE_USER)
+ * </p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -14,6 +30,15 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     
+    /**
+     * Initialize default user accounts.
+     * 
+     * <p>Executed on application startup. Creates admin and regular user
+     * accounts if they don't exist. Passwords are encrypted with BCrypt.</p>
+     * 
+     * @param args Command-line arguments (unused)
+     * @throws Exception if initialization fails
+     */
     @Override
     public void run(String... args) throws Exception {
         // Tạo user test nếu chưa tồn tại

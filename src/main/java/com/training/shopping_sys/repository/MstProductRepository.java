@@ -8,9 +8,40 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Product Repository.
+ * 
+ * <p>Data access interface for {@link MstProduct} entity.
+ * Extends JpaRepository to provide CRUD operations and custom queries.</p>
+ * 
+ * <p>Custom queries include:
+ * - Product search with keyword filtering and product type filtering
+ * - Aggregation of total ordered amounts per product
+ * - Sorting by popularity (total orders)
+ * </p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Repository
 public interface MstProductRepository extends JpaRepository<MstProduct, Long> {
     
+    /**
+     * Search products with keyword and product type filter.
+     * 
+     * <p>Native SQL query that:
+     * - Filters active products and product types (status != '1')
+     * - Supports case-insensitive keyword search on name and description
+     * - Filters by product type if specified
+     * - Joins with order table to calculate total ordered amounts
+     * - Orders results by popularity (total_ordered DESC)
+     * </p>
+     * 
+     * @param keyword Search keyword for product name/description (optional)
+     * @param producttypeId Filter by product type ID (optional)
+     * @return List of Object arrays containing product data and total ordered amount
+     */
     @Query(value = "SELECT p.product_id, p.product_name, p.product_description, p.product_img, " +
             "p.producttype_id, pt.producttype_name, COALESCE(SUM(o.order_product_amount), 0) as total_ordered " +
             "FROM mstproduct p " +

@@ -18,6 +18,26 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Image Service.
+ * 
+ * <p>Handles image upload, storage, and management for product images.
+ * Supports multiple storage strategies:</p>
+ * <ul>
+ *   <li>Database storage as byte arrays</li>
+ *   <li>File system storage in configurable directory</li>
+ * </ul>
+ * 
+ * <p>Provides functionality for:
+ * - Uploading images from multipart files
+ * - Bulk loading images from file system
+ * - Image validation and format checking
+ * </p>
+ * 
+ * @author Training Team
+ * @version 1.0
+ * @since 1.0
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,11 +50,14 @@ public class ImageService {
     private String imageStoragePath;
     
     /**
-     * Cập nhật ảnh cho sản phẩm từ MultipartFile
-     * Lưu file vào thư mục uploads/products và lưu byte[] vào DB
-     * @param productId ID của sản phẩm
-     * @param file File ảnh upload
-     * @return true nếu cập nhật thành công
+     * Update product image from multipart file upload.
+     * 
+     * <p>Validates file type, saves to file system with UUID-based filename,
+     * and stores byte array in database. Creates storage directory if not exists.</p>
+     * 
+     * @param productId ID of the product to update
+     * @param file Uploaded image file (must be valid image format)
+     * @return true if update successful, false otherwise
      */
     @Transactional
     public boolean updateProductImage(Long productId, MultipartFile file) {
@@ -88,10 +111,14 @@ public class ImageService {
     }
     
     /**
-     * Cập nhật ảnh cho sản phẩm từ file path
-     * @param productId ID của sản phẩm
-     * @param imagePath Đường dẫn tới file ảnh
-     * @return true nếu cập nhật thành công
+     * Update product image from file system path.
+     * 
+     * <p>Reads image from specified file path and stores in database.
+     * Useful for batch loading images from existing files.</p>
+     * 
+     * @param productId ID of the product to update
+     * @param imagePath File system path to the image file
+     * @return true if update successful, false otherwise
      */
     @Transactional
     public boolean updateProductImageFromPath(Long productId, String imagePath) {
@@ -125,9 +152,15 @@ public class ImageService {
     }
     
     /**
-     * Đọc và cập nhật ảnh cho nhiều sản phẩm từ thư mục img
-     * Quy ước tên file: product_{productId}.jpg hoặc product_{productId}.png
-     * Ví dụ: product_1.jpg, product_2.png
+     * Bulk load images from img folder to database.
+     * 
+     * <p>Scans img/ folder for product images following naming convention:
+     * product_{productId}.jpg or product_{productId}.png. Loads images
+     * for products 1-20 and stores in database.</p>
+     * 
+     * <p>Tries JPG format first, falls back to PNG if JPG not found.</p>
+     * 
+     * @return Number of images successfully loaded
      */
     @Transactional
     public int loadImagesFromImgFolder() {
