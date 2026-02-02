@@ -1,16 +1,18 @@
 package com.training.shopping_sys.service;
 
 import com.training.shopping_sys.dto.ProductSearchDTO;
+import com.training.shopping_sys.dto.ProductSearchProjection;
 import com.training.shopping_sys.dto.ProductSearchResultDTO;
 import com.training.shopping_sys.entity.MstProductType;
 import com.training.shopping_sys.repository.MstProductRepository;
 import com.training.shopping_sys.repository.MstProductTypeRepository;
 import com.training.shopping_sys.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -20,8 +22,8 @@ import java.util.List;
  * product search with pagination, filtering by keyword and product type,
  * and retrieving active product types.</p>
  * 
- * <p>Implements pagination with configurable page size and handles
- * image URL generation for product images stored in database.</p>
+ * <p>Implements pagination using Spring Data JPA Pageable for efficient
+ * database queries and automatic pagination handling.</p>
  * 
  * @author Training Team
  * @version 1.0
@@ -39,14 +41,14 @@ public class ProductService {
     private static final int PAGE_SIZE = 5;
     
     /**
-     * Search products with pagination.
+     * Search products with pagination using JPA.
      * 
      * <p>Searches products by keyword (product name) and/or product type.
-     * Results are paginated with configurable page size. Keyword is
+     * Results are paginated using Spring Data JPA Pageable. Keyword is
      * truncated to 400 characters if exceeds limit.</p>
      * 
-     * <p>For each product, calculates total ordered amount and generates
-     * image URL if image exists in database.</p>
+     * <p>For each product, total ordered amount is calculated by the database
+     * and image URL is generated if image exists.</p>
      * 
      * @param keyword Search keyword for product name (optional, max 400 chars)
      * @param producttypeId Filter by product type ID (optional)
@@ -59,57 +61,52 @@ public class ProductService {
             keyword = keyword.substring(0, 400);
         }
         
-        // Get all matching products
-        List<Object[]> results = productRepository.searchProducts(keyword, producttypeId);
-        
-        // Convert to DTOs
-        List<ProductSearchDTO> allProducts = new ArrayList<>();
-        for (Object[] result : results) {
-            ProductSearchDTO dto = new ProductSearchDTO();
-            dto.setProductId(((Number) result[0]).longValue());
-            dto.setProductName((String) result[1]);
-            dto.setProductDescription((String) result[2]);
-            
-            // result[3]: product_img (byte[])
-            byte[] imageBytes = (byte[]) result[3];
-            if (imageBytes != null && imageBytes.length > 0) {
-                dto.setHasImage(true);
-                // Set URL to serve image from /products/image/{id} endpoint
-                dto.setImageUrl("/products/image/" + dto.getProductId());
-            } else {
-                dto.setHasImage(false);
-                dto.setImageUrl(null);
-            }
-            
-            dto.setProducttypeId(((Number) result[4]).longValue());
-            dto.setProducttypeName((String) result[5]);
-            dto.setTotalOrdered(((Number) result[6]).longValue());
-            allProducts.add(dto);
-        }
-        
-        // Pagination
-        int totalElements = allProducts.size();
-        int totalPages = (int) Math.ceil((double) totalElements / PAGE_SIZE);
-        
-        // Adjust page if out of bounds
+        // Adjust page if negative
         if (page < 0) page = 0;
-        if (page >= totalPages && totalPages > 0) page = totalPages - 1;
         
-        // Get products for current page
-        int start = page * PAGE_SIZE;
-        int end = Math.min(start + PAGE_SIZE, totalElements);
-        List<ProductSearchDTO> pageProducts = (start < totalElements) 
-            ? allProducts.subList(start, end) 
-            : new ArrayList<>();
+        // Create pageable - note: sorting is handled in the query itself
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
         
-        // Build result
+        // Execute search with pagination - JPA handles everything
+        Page<ProductSearchProjection> productPage = productRepository.searchProducts(
+            keyword, 
+            producttypeId, 
+            pageable
+        );
+        
+        // Convert projections to DTOs
+        List<ProductSearchDTO> pageProducts = productPage.getContent().stream()
+            .map(projection -> {
+                ProductSearchDTO dto = new ProductSearchDTO();
+                dto.setProductId(projection.getProductId());
+                dto.setProductName(projection.getProductName());
+                dto.setProductDescription(projection.getProductDescription());
+                
+                byte[] imageBytes = projection.getProductImg();
+                if (imageBytes != null && imageBytes.length > 0) {
+                    dto.setHasImage(true);
+                    dto.setImageUrl("/products/image/" + projection.getProductId());
+                } else {
+                    dto.setHasImage(false);
+                    dto.setImageUrl(null);
+                }
+                
+                dto.setProducttypeId(projection.getProducttypeId());
+                dto.setProducttypeName(projection.getProducttypeName());
+                dto.setTotalOrdered(projection.getTotalOrdered());
+                
+                return dto;
+            })
+            .toList();
+        
+        // Build result from Page object
         ProductSearchResultDTO result = new ProductSearchResultDTO();
         result.setProducts(pageProducts);
-        result.setCurrentPage(page);
-        result.setTotalPages(totalPages);
-        result.setTotalElements(totalElements);
-        result.setHasNext(page < totalPages - 1);
-        result.setHasPrevious(page > 0);
+        result.setCurrentPage(productPage.getNumber());
+        result.setTotalPages(productPage.getTotalPages());
+        result.setTotalElements((int) productPage.getTotalElements());
+        result.setHasNext(productPage.hasNext());
+        result.setHasPrevious(productPage.hasPrevious());
         result.setKeyword(keyword);
         result.setProducttypeId(producttypeId);
         

@@ -354,9 +354,10 @@ public class OrderController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             
-            // Calculate max(order_id) + 1 for new order ID
-            Long maxOrderId = orderRepository.findMaxOrderId();
-            Long orderId = (maxOrderId != null) ? maxOrderId + 1 : 1L;
+            // Calculate max(order_id) + 1 for new order ID using optimized JPQL
+            Long orderId = orderRepository.findMaxOrderId()
+                .map(maxId -> maxId + 1)
+                .orElse(1L);
             
             // Convert deliveryDate from YYYY/MM/DD to YYYYMMDD for database storage
             String deliveryDateDb = deliveryDate.replace("/", "");

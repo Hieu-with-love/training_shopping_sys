@@ -39,11 +39,14 @@ CREATE TABLE mstproduct (
 -- 3. Tạo bảng trproductorder (Đơn hàng)
 -- ============================================
 CREATE TABLE trproductorder (
-    order_id SERIAL PRIMARY KEY,
-    product_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    user_id INTEGER,
+    order_id BIGINT NOT NULL,
+    customer_name VARCHAR(400) NOT NULL,
+    product_id BIGINT NOT NULL,
+    order_product_amount INTEGER NOT NULL DEFAULT 0,
+    order_delivery_address VARCHAR(400),
+    order_delivery_date VARCHAR(8), -- Format: YYYYMMDD
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_trproductorder PRIMARY KEY (order_id, customer_name, product_id),
     CONSTRAINT fk_product FOREIGN KEY (product_id) 
         REFERENCES mstproduct(product_id)
 );
@@ -109,42 +112,58 @@ INSERT INTO mstproduct (product_name, product_description, product_img, productt
 -- 6. Insert dữ liệu mẫu - Đơn hàng
 -- ============================================
 -- Tạo đơn hàng để test sắp xếp theo số lượng
+-- Composite key: (order_id, customer_name, product_id)
 
 -- iPhone 15 Pro Max - 150 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(1, 50, 1), (1, 30, 2), (1, 40, 3), (1, 30, 4);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(1, 'Nguyễn Văn A', 1, 50, '123 Lê Lợi, Q1, TP.HCM', '20260215', '2026-01-15 10:30:00'),
+(2, 'Trần Thị B', 1, 30, '456 Nguyễn Huệ, Q1, TP.HCM', '20260220', '2026-01-16 14:20:00'),
+(3, 'Lê Văn C', 1, 40, '789 Trần Hưng Đạo, Q5, TP.HCM', '20260225', '2026-01-17 09:15:00'),
+(4, 'Phạm Thị D', 1, 30, '321 Võ Văn Tần, Q3, TP.HCM', '20260228', '2026-01-18 16:45:00');
 
 -- Samsung Galaxy S24 Ultra - 200 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(2, 80, 1), (2, 60, 2), (2, 60, 3);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(5, 'Hoàng Văn E', 2, 80, '555 Điện Biên Phủ, Q10, TP.HCM', '20260218', '2026-01-19 11:00:00'),
+(6, 'Đỗ Thị F', 2, 60, '666 Cách Mạng Tháng 8, Q3, TP.HCM', '20260222', '2026-01-20 13:30:00'),
+(7, 'Vũ Văn G', 2, 60, '777 Hai Bà Trưng, Q1, TP.HCM', '20260226', '2026-01-21 15:00:00');
 
 -- Xiaomi 14 Pro - 80 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(3, 30, 1), (3, 25, 2), (3, 25, 3);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(8, 'Bùi Văn H', 3, 30, '888 Lý Thường Kiệt, Q10, TP.HCM', '20260219', '2026-01-22 10:00:00'),
+(9, 'Đặng Thị I', 3, 25, '999 Nguyễn Thị Minh Khai, Q3, TP.HCM', '20260223', '2026-01-23 14:00:00'),
+(10, 'Cao Văn K', 3, 25, '111 Pasteur, Q1, TP.HCM', '20260227', '2026-01-24 16:00:00');
 
 -- iPhone 14 Pro - 120 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(4, 50, 1), (4, 40, 2), (4, 30, 3);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(11, 'Ngô Văn L', 4, 50, '222 Cộng Hòa, Q.Tân Bình, TP.HCM', '20260220', '2026-01-25 09:30:00'),
+(12, 'Đinh Thị M', 4, 40, '333 Nam Kỳ Khởi Nghĩa, Q1, TP.HCM', '20260224', '2026-01-26 11:45:00'),
+(13, 'Dương Văn N', 4, 30, '444 Trường Chinh, Q.Tân Bình, TP.HCM', '20260228', '2026-01-27 13:20:00');
 
 -- MacBook Pro 16 M3 - 95 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(7, 45, 1), (7, 50, 2);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(14, 'Hồ Văn O', 7, 45, '555 Phan Xích Long, Q.Phú Nhuận, TP.HCM', '20260221', '2026-01-28 10:15:00'),
+(15, 'Lý Thị P', 7, 50, '666 Hoàng Văn Thụ, Q.Tân Bình, TP.HCM', '20260225', '2026-01-29 14:30:00');
 
 -- Dell XPS 15 - 110 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(8, 60, 1), (8, 50, 2);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(16, 'Mai Văn Q', 8, 60, '777 Lê Văn Sỹ, Q3, TP.HCM', '20260222', '2026-01-30 09:00:00'),
+(17, 'Võ Thị R', 8, 50, '888 Xô Viết Nghệ Tĩnh, Q.Bình Thạnh, TP.HCM', '20260226', '2026-01-31 15:45:00');
 
 -- iPad Pro - 140 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(12, 70, 1), (12, 70, 2);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(18, 'Phan Văn S', 12, 70, '999 Đinh Tiên Hoàng, Q1, TP.HCM', '20260223', '2026-02-01 11:30:00'),
+(19, 'Tô Thị T', 12, 70, '111 Tôn Đức Thắng, Q1, TP.HCM', '20260227', '2026-02-02 13:00:00');
 
 -- AirPods Pro 2 - 300 đơn (sản phẩm bán chạy nhất)
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(17, 100, 1), (17, 100, 2), (17, 100, 3);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(20, 'Trịnh Văn U', 17, 100, '222 Nguyễn Đình Chiểu, Q3, TP.HCM', '20260224', '2026-02-03 10:00:00'),
+(21, 'Lâm Thị V', 17, 100, '333 Võ Thị Sáu, Q3, TP.HCM', '20260228', '2026-02-04 14:15:00'),
+(22, 'Hứa Văn W', 17, 100, '444 Ký Con, Q1, TP.HCM', '20260303', '2026-02-05 16:30:00');
 
 -- Apple Watch Ultra 2 - 180 đơn
-INSERT INTO trproductorder (product_id, quantity, user_id) VALUES
-(21, 90, 1), (21, 90, 2);
+INSERT INTO trproductorder (order_id, customer_name, product_id, order_product_amount, order_delivery_address, order_delivery_date, order_date) VALUES
+(23, 'Ông Văn X', 21, 90, '555 Lý Tự Trọng, Q1, TP.HCM', '20260225', '2026-02-06 09:45:00'),
+(24, 'Bà Thị Y', 21, 90, '666 Nguyễn Trãi, Q5, TP.HCM', '20260301', '2026-02-07 12:20:00');
 
 -- Các sản phẩm còn lại có ít đơn hơn hoặc không có đơn
 
@@ -186,13 +205,13 @@ SELECT
     p.product_id,
     p.product_name,
     pt.producttype_name,
-    COALESCE(SUM(o.quantity), 0) as total_ordered
+    COALESCE(SUM(o.order_product_amount), 0) as total_ordered
 FROM mstproduct p
 INNER JOIN mstproducttype pt ON p.producttype_id = pt.producttype_id
 LEFT JOIN trproductorder o ON p.product_id = o.product_id
 WHERE p.status != '1' AND pt.status != '1'
 GROUP BY p.product_id, p.product_name, pt.producttype_name
-ORDER BY total_ordered ASC;
+ORDER BY total_ordered DESC;
 
 -- ============================================
 -- HƯỚNG DẪN SỬ DỤNG:
