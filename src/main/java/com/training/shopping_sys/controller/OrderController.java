@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -127,6 +129,7 @@ public class OrderController {
             OrderItemDTO item = new OrderItemDTO();
             item.setProductId(productId);
             item.setProductName(mstProduct.getProductName());
+            item.setProductDescription(mstProduct.getProductDescription());
             item.setQuantity(quantity);
             item.setAvailableStock(availableStock);
             item.setProducttypeName(mstProduct.getProductType() != null ? mstProduct.getProductType().getProducttypeName() : "");
@@ -193,6 +196,7 @@ public class OrderController {
         OrderItemDTO item = new OrderItemDTO();
         item.setProductId(productId);
         item.setProductName(product.getProductName());
+        item.setProductDescription(product.getProductDescription());
         item.setQuantity(quantity);
         item.setAvailableStock(availableStock);
         item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
@@ -212,57 +216,160 @@ public class OrderController {
      * Confirm and process the order.
      * 
      * <p>Creates order records in the database for all selected products.
-     * Performs final stock validation before saving. All products in a
-     * single order share the same order ID (timestamp-based).</p>
+     * Performs comprehensive validation including:
+     * - Customer name, delivery address, delivery date presence
+     * - Date format (YYYY/MM/DD) and future date validation
+     * - Stock availability for each product
+     * All products in a single order share the same order ID (max+1 from database).</p>
      * 
+     * @param customerName Name of the customer placing the order (max 200 chars)
+     * @param deliveryAddress Delivery address for the order (max 400 chars)
+     * @param deliveryDate Delivery date in YYYY/MM/DD format (max 10 chars)
      * @param productIds List of product IDs to order
      * @param quantities List of quantities corresponding to each product
+     * @param keyword Search keyword to preserve state on cancel
+     * @param producttypeId Product type filter to preserve state on cancel
+     * @param page Current page number to preserve state on cancel
      * @param redirectAttributes Attributes for success/error messages
-     * @return Redirect to success page or product list on error
+     * @param model Spring MVC Model for error display
+     * @return Redirect to success page or stay on order page with errors
      */
     @PostMapping("/confirm")
     public String confirmOrder(
+            @RequestParam("customerName") String customerName,
+            @RequestParam("deliveryAddress") String deliveryAddress,
+            @RequestParam("deliveryDate") String deliveryDate,
             @RequestParam("productIds") List<Long> productIds,
             @RequestParam("quantities") List<Integer> quantities,
-            RedirectAttributes redirectAttributes) {
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+            @RequestParam(value = "producttypeId", required = false) Long producttypeId,
+            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
+            RedirectAttributes redirectAttributes,
+            Model model) {
         
+        StringBuilder errorMessages = new StringBuilder();
+        
+        // Validation 1: Check empty customer name
+        if (customerName == null || customerName.trim().isEmpty()) {
+            errorMessages.append("Người đặt hàng không được để trống.<br>");
+        }
+        
+        // Validation 2: Check empty delivery address
+        if (deliveryAddress == null || deliveryAddress.trim().isEmpty()) {
+            errorMessages.append("Địa chỉ giao hàng không được để trống.<br>");
+        }
+        
+        // Validation 3: Check empty delivery date
+        if (deliveryDate == null || deliveryDate.trim().isEmpty()) {
+            errorMessages.append("Ngày giao hàng không được để trống.<br>");
+        } else {
+            // Validation 4: Check date format YYYY/MM/DD
+            if (!deliveryDate.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+                errorMessages.append("Ngày giao hàng không đúng định dạng YYYY/MM/DD.<br>");
+            } else {
+                // Validation 5: Check date is not in the past
+                try {
+                    LocalDate deliveryLocalDate = LocalDate.parse(deliveryDate,
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+                    LocalDate today = LocalDate.now();
+                    
+                    if (deliveryLocalDate.isBefore(today)) {
+                        errorMessages.append("Ngày giao hàng phải từ ngày hiện tại trở về sau.<br>");
+                    }
+                } catch (Exception e) {
+                    errorMessages.append("Ngày giao hàng không hợp lệ.<br>");
+                }
+            }
+        }
+        
+        // Validation 6: Check stock availability for each product
+        List<String> stockErrors = new ArrayList<>();
+        for (int i = 0; i < productIds.size(); i++) {
+            Long productId = productIds.get(i);
+            Integer quantity = quantities.get(i);
+            
+            Optional<MstProduct> productOpt = productRepository.findById(productId);
+            if (productOpt.isPresent()) {
+                MstProduct product = productOpt.get();
+                Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+                Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+                
+                if (quantity > availableStock) {
+                    stockErrors.add(String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
+                        product.getProductName(), availableStock));
+                }
+            }
+        }
+        
+        // Add stock errors to main error messages
+        for (String stockError : stockErrors) {
+            errorMessages.append(stockError).append("<br>");
+        }
+        
+        // If there are any errors, return to order page with error messages
+        if (errorMessages.length() > 0) {
+            // Rebuild order items for display
+            List<OrderItemDTO> orderItems = new ArrayList<>();
+            for (int i = 0; i < productIds.size(); i++) {
+                Long productId = productIds.get(i);
+                Integer quantity = quantities.get(i);
+                
+                Optional<MstProduct> productOpt = productRepository.findById(productId);
+                if (productOpt.isPresent()) {
+                    MstProduct product = productOpt.get();
+                    Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
+                    Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+                    
+                    OrderItemDTO item = new OrderItemDTO();
+                    item.setProductId(productId);
+                    item.setProductName(product.getProductName());
+                    item.setProductDescription(product.getProductDescription());
+                    item.setQuantity(quantity);
+                    item.setAvailableStock(availableStock);
+                    item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
+                    orderItems.add(item);
+                }
+            }
+            
+            // Get current user
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String username = auth.getName();
+            
+            model.addAttribute("orderItems", orderItems);
+            model.addAttribute("username", username);
+            model.addAttribute("customerName", customerName);
+            model.addAttribute("deliveryAddress", deliveryAddress);
+            model.addAttribute("deliveryDate", deliveryDate);
+            model.addAttribute("error", errorMessages.toString());
+            model.addAttribute("keyword", keyword);
+            model.addAttribute("producttypeId", producttypeId);
+            model.addAttribute("page", page);
+            
+            return "order";
+        }
+        
+        // All validations passed, proceed with order creation
         try {
             // Get current user info
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             
-            // Generate order ID một lần cho tất cả sản phẩm
-            Long orderId = System.currentTimeMillis();
+            // Calculate max(order_id) + 1 for new order ID
+            Long maxOrderId = orderRepository.findMaxOrderId();
+            Long orderId = (maxOrderId != null) ? maxOrderId + 1 : 1L;
             
-            // Xử lý từng sản phẩm
+            // Convert deliveryDate from YYYY/MM/DD to YYYYMMDD for database storage
+            String deliveryDateDb = deliveryDate.replace("/", "");
+            
+            // Create order records for each product
             for (int i = 0; i < productIds.size(); i++) {
                 Long productId = productIds.get(i);
                 Integer quantity = quantities.get(i);
                 
-                // Validate product exists
-                Optional<MstProduct> productOpt = productRepository.findById(productId);
-                if (productOpt.isEmpty()) {
-                    redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
-                    return "redirect:/products/list";
-                }
-                
-                MstProduct product = productOpt.get();
-                
-                // Validate stock availability again before confirming
-                Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-                Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
-                
-                if (quantity > availableStock) {
-                    redirectAttributes.addFlashAttribute("error", 
-                        String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                            product.getProductName(), availableStock));
-                    return "redirect:/products/list";
-                }
-                
                 // Create composite key
                 TrProductOrderKey orderKey = new TrProductOrderKey();
                 orderKey.setOrderId(orderId);
-                orderKey.setCustomerName(username);
+                orderKey.setCustomerName(customerName);
                 orderKey.setProductId(productId);
                 
                 // Create order
@@ -270,6 +377,8 @@ public class OrderController {
                 order.setId(orderKey);
                 order.setOrderProductAmount(quantity);
                 order.setOrderDate(LocalDateTime.now());
+                order.setOrderDeliveryAddress(deliveryAddress);
+                order.setOrderDeliveryDate(deliveryDateDb);
                 
                 orderRepository.save(order);
             }
@@ -277,13 +386,11 @@ public class OrderController {
             redirectAttributes.addFlashAttribute("message", 
                 "Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận.");
             
-            // Redirect về init state (không có search params)
             return "redirect:/orders/success";
             
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", 
                 "Có lỗi xảy ra khi đặt hàng: " + e.getMessage());
-            // Redirect về init state khi có lỗi
             return "redirect:/products/list";
         }
     }

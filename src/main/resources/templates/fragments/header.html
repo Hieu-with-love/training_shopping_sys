@@ -1,9 +1,23 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <body>
     <header th:fragment="header">
-        <!-- Header content can be added here if needed -->
+        <div
+            style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; padding: 10px 20px; margin-bottom: 20px;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+                <div>
+                    <h4 style="margin: 0; color: #495057;">システム管理</h4>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span sec:authentication="name" style="color: #495057; font-weight: 500;">User</span>
+                    <form th:action="@{/logout}" method="post" style="margin: 0;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">ログアウト</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </header>
 </body>
 

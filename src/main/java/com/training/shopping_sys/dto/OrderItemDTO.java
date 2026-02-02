@@ -25,6 +25,9 @@ public class OrderItemDTO {
     /** Product name. */
     private String productName;
     
+    /** Product description. */
+    private String productDescription;
+    
     /** Quantity to order. */
     private Integer quantity;
     

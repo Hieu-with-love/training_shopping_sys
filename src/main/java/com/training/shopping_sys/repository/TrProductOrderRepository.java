@@ -14,7 +14,7 @@ import org.springframework.stereotype.Repository;
  * Handles order transactions with composite primary key.</p>
  * 
  * <p>Provides aggregation queries for calculating total ordered amounts
- * per product, useful for stock availability checks.</p>
+ * per product and finding maximum order ID for new order generation.</p>
  * 
  * @author Training Team
  * @version 1.0
@@ -34,4 +34,15 @@ public interface TrProductOrderRepository extends JpaRepository<TrProductOrder, 
      */
     @Query("SELECT COALESCE(SUM(t.orderProductAmount), 0) FROM TrProductOrder t WHERE t.id.productId = :productId")
     Integer getTotalOrderedAmount(@Param("productId") Long productId);
+    
+    /**
+     * Find maximum order ID in the database.
+     * 
+     * <p>Returns the highest order_id value currently in the system.
+     * Used to generate new sequential order IDs. Returns null if no orders exist.</p>
+     * 
+     * @return Maximum order ID, or null if no orders
+     */
+    @Query("SELECT MAX(t.id.orderId) FROM TrProductOrder t")
+    Long findMaxOrderId();
 }

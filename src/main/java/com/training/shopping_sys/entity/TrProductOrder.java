@@ -41,6 +41,14 @@ public class TrProductOrder {
     @Column(name = "order_product_amount")
     private Integer orderProductAmount;
     
+    /** Delivery address for the order. Maximum length: 400 characters. */
+    @Column(name = "order_delivery_address", length = 400)
+    private String orderDeliveryAddress;
+    
+    /** Delivery date for the order. Format: YYYYMMDD */
+    @Column(name = "order_delivery_date", length = 8)
+    private String orderDeliveryDate;
+    
     /** Date and time when the order was placed. */
     @Column(name = "order_date")
     private LocalDateTime orderDate;

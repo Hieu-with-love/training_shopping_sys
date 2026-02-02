@@ -6,6 +6,63 @@
     <title>Xác nhận đặt hàng - Shopping System</title>
     <th:block layout:fragment="extra-styles">
         <style>
+            .order-form-container {
+                background-color: #ffffff;
+                padding: 30px;
+                border-radius: 8px;
+                margin-bottom: 30px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group label {
+                display: block;
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 8px;
+            }
+
+            .form-group input {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            .form-group input:focus {
+                outline: none;
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            }
+
+            .form-group input.error {
+                border-color: #dc3545;
+            }
+
+            .field-error-message {
+                color: #dc3545;
+                font-size: 13px;
+                margin-top: 5px;
+                display: none;
+            }
+
+            .field-error-message.show {
+                display: block;
+            }
+
+            .alert-error {
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                color: #721c24;
+                padding: 15px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+            }
+
             .order-info {
                 background-color: #f8f9fa;
                 padding: 20px;
@@ -69,11 +126,26 @@
                 border-radius: 4px;
             }
 
+            .quantity-input {
+                width: 80px;
+                text-align: center;
+            }
+
             .button-group {
                 display: flex;
                 gap: 15px;
                 justify-content: center;
                 margin-top: 30px;
+            }
+
+            .btn {
+                padding: 12px 30px;
+                border: none;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background-color 0.3s;
             }
 
             .btn-confirm {
@@ -94,27 +166,13 @@
                 background-color: #5a6268;
             }
 
-            .summary-section {
-                background-color: #d4edda;
-                padding: 20px;
-                border-radius: 8px;
-                margin-top: 20px;
-            }
-
-            .summary-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 10px;
-                font-size: 18px;
-            }
-
-            .summary-row.total {
-                font-weight: bold;
-                font-size: 24px;
-                color: #28a745;
-                border-top: 2px solid #28a745;
-                padding-top: 15px;
-                margin-top: 15px;
+            .section-title {
+                font-size: 20px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #007bff;
             }
 
             @media (max-width: 768px) {
@@ -151,78 +209,303 @@
 
 <body>
     <section layout:fragment="content">
-        <h1>🛒 Xác Nhận Đặt Hàng</h1>
+        <h1>🛒 Trang Đặt Hàng</h1>
 
-        <div class="order-info">
-            <div class="info-row">
-                <span class="info-label">Người đặt hàng:</span>
-                <span class="info-value" th:text="${username}">User</span>
+        <!-- Error Messages -->
+        <div th:if="${error}" class="alert-error" th:utext="${error}"></div>
+
+        <form id="orderForm" th:action="@{/orders/confirm}" method="post">
+            <!-- Hidden fields for search state preservation -->
+            <input type="hidden" name="keyword" th:value="${keyword}">
+            <input type="hidden" name="producttypeId" th:value="${producttypeId}">
+            <input type="hidden" name="page" th:value="${page}">
+
+            <!-- Thông tin người đặt hàng -->
+            <div class="order-form-container">
+                <h2 class="section-title">Thông tin người đặt hàng</h2>
+
+                <div class="form-group">
+                    <label for="customerName">Người đặt hàng: <span style="color: red;">*</span></label>
+                    <input type="text" id="customerName" name="customerName"
+                        th:value="${customerName != null ? customerName : username}" maxlength="200"
+                        placeholder="Nhập tên người đặt hàng">
+                    <div id="customerNameError" class="field-error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="deliveryAddress">Địa chỉ giao hàng: <span style="color: red;">*</span></label>
+                    <input type="text" id="deliveryAddress" name="deliveryAddress" th:value="${deliveryAddress}"
+                        maxlength="400" placeholder="Nhập địa chỉ giao hàng">
+                    <div id="deliveryAddressError" class="field-error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="deliveryDate">Ngày giao hàng (YYYY/MM/DD): <span style="color: red;">*</span></label>
+                    <input type="text" id="deliveryDate" name="deliveryDate" th:value="${deliveryDate}" maxlength="10"
+                        placeholder="YYYY/MM/DD">
+                    <div id="deliveryDateError" class="field-error-message"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Bảng danh sách sản phẩm -->
-        <h2>Danh sách sản phẩm đặt hàng</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Hình ảnh</th>
-                    <th>Mã sản phẩm</th>
-                    <th>Tên sản phẩm</th>
-                    <th>Loại sản phẩm</th>
-                    <th>Số lượng</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="item, iterStat : ${orderItems}">
-                    <td th:text="${iterStat.index + 1}">1</td>
-                    <td>
-                        <img th:src="@{'/products/image/' + ${item.productId}}" alt="Product Image" class="product-img"
-                            onerror="this.style.display='none'">
-                    </td>
-                    <td th:text="${item.productId}">1</td>
-                    <td th:text="${item.productName}">Product Name</td>
-                    <td th:text="${item.producttypeName}">Category</td>
-                    <td th:text="${item.quantity}">0</td>
-                </tr>
-            </tbody>
-        </table>
+            <!-- Danh sách sản phẩm -->
+            <h2 class="section-title">Danh sách sản phẩm</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Hình ảnh</th>
+                        <th>Tên sản phẩm / Mô tả</th>
+                        <th>Loại sản phẩm</th>
+                        <th>Số lượng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item, iterStat : ${orderItems}">
+                        <td th:text="${iterStat.index + 1}">1</td>
+                        <td>
+                            <img th:src="@{'/products/image/' + ${item.productId}}" alt="Product Image"
+                                class="product-img" onerror="this.style.display='none'">
+                        </td>
+                        <td>
+                            <div><strong><span th:text="${item.productId}">11010001</span> - <span
+                                        th:text="${item.productName}">Product Name</span></strong></div>
+                            <div style="font-size: 12px; color: #666;" th:if="${item.productDescription}">
+                                <span th:text="${item.productDescription}">Description</span>
+                            </div>
+                        </td>
+                        <td th:text="${item.producttypeName}">Category</td>
+                        <td>
+                            <input type="number" class="quantity-input" th:name="'quantities'"
+                                th:id="'qty_' + ${item.productId}" th:data-product-id="${item.productId}"
+                                th:data-product-name="${item.productName}"
+                                th:data-available-stock="${item.availableStock}" th:value="${item.quantity}" min="1"
+                                onblur="validateQuantity(this)">
+                            <input type="hidden" th:name="'productIds'" th:value="${item.productId}">
+                            <div th:id="'qtyError_' + ${item.productId}" class="field-error-message"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
-        <!-- Tổng kết -->
-        <div class="summary-section">
-            <div class="summary-row">
-                <span>Tổng số sản phẩm:</span>
-                <span th:text="${orderItems.size()}">0</span>
-            </div>
-            <div class="summary-row">
-                <span>Tổng số lượng:</span>
-                <span th:text="${#aggregates.sum(orderItems.![quantity])}">0</span>
-            </div>
-        </div>
-        </div>
-
-        <form method="post" th:action="@{/orders/confirm}">
-            <input type="hidden" th:each="item, iterStat : ${orderItems}"
-                th:name="'productIds[' + ${iterStat.index} + ']'" th:value="${item.productId}">
-            <input type="hidden" th:each="item, iterStat : ${orderItems}"
-                th:name="'quantities[' + ${iterStat.index} + ']'" th:value="${item.quantity}">
-
+            <!-- Buttons -->
             <div class="button-group">
-                <button type="submit" class="btn-confirm">✓ Xác nhận đặt hàng</button>
-                <button type="button" class="btn btn-cancel" onclick="cancelOrder()">✗ Hủy</button>
+                <button type="button" class="btn btn-confirm" onclick="submitOrder()">Đặt hàng</button>
+                <button type="button" class="btn btn-cancel" onclick="cancelOrder()">Cancel</button>
             </div>
         </form>
 
         <script th:inline="javascript">
-            function cancelOrder() {
-                // Lấy search params từ server
-                const keyword = /*[[${keyword}]]*/ '';
-                const producttypeId = /*[[${producttypeId}]]*/ '';
-                const page = /*[[${page}]]*/ 0;
-                const productIds = /*[[${productIds}]]*/[];
-                const quantities = /*[[${quantities}]]*/[];
+            const orderItems = /*[[${orderItems}]]*/[];
+            const keyword = /*[[${keyword}]]*/ '';
+            const producttypeId = /*[[${producttypeId}]]*/ null;
+            const page = /*[[${page}]]*/ 1;
 
-                // Build URL với search params
+            // Validate quantity on blur
+            function validateQuantity(input) {
+                const productId = input.dataset.productId;
+                const productName = input.dataset.productName;
+                const availableStock = parseInt(input.dataset.availableStock);
+                const quantity = input.value.trim();
+                const errorDiv = document.getElementById('qtyError_' + productId);
+
+                // Clear previous error
+                errorDiv.classList.remove('show');
+                errorDiv.textContent = '';
+                input.classList.remove('error');
+
+                // Check if empty
+                if (quantity === '') {
+                    return;
+                }
+
+                // Check if integer
+                if (!/^\d+$/.test(quantity)) {
+                    errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
+                    errorDiv.classList.add('show');
+                    input.classList.add('error');
+                    input.focus();
+                    return false;
+                }
+
+                const qtyValue = parseInt(quantity);
+
+                // Check if positive
+                if (qtyValue <= 0) {
+                    errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
+                    errorDiv.classList.add('show');
+                    input.classList.add('error');
+                    input.focus();
+                    return false;
+                }
+
+                // Check against available stock
+                if (qtyValue > availableStock) {
+                    errorDiv.textContent = `Số lượng đặt hàng của sản phẩm ${productName} không đủ trong kho. Xin hãy nhập số lượng <= ${availableStock}`;
+                    errorDiv.classList.add('show');
+                    input.classList.add('error');
+                    input.focus();
+                    return false;
+                }
+
+                return true;
+            }
+
+            // Validate date format and value
+            function validateDate(dateString) {
+                // Check format YYYY/MM/DD
+                const datePattern = /^(\d{4})\/(\d{2})\/(\d{2})$/;
+                const match = dateString.match(datePattern);
+
+                if (!match) {
+                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
+                }
+
+                const year = parseInt(match[1]);
+                const month = parseInt(match[2]);
+                const day = parseInt(match[3]);
+
+                // Check valid date
+                const date = new Date(year, month - 1, day);
+                if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
+                }
+
+                // Check if date is not in the past
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                date.setHours(0, 0, 0, 0);
+
+                if (date < today) {
+                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
+                }
+
+                return { valid: true };
+            }
+
+            // Submit order
+            function submitOrder() {
+                let isValid = true;
+                let firstErrorField = null;
+
+                // Clear all errors
+                document.querySelectorAll('.error-message').forEach(el => {
+                    el.classList.remove('show');
+                    el.textContent = '';
+                });
+                document.querySelectorAll('input').forEach(el => {
+                    el.classList.remove('error');
+                });
+
+                // Validate customer name
+                const customerName = document.getElementById('customerName').value.trim();
+                if (!customerName) {
+                    const errorDiv = document.getElementById('customerNameError');
+                    errorDiv.textContent = 'Xin hãy nhập thông tin người đặt hàng';
+                    errorDiv.classList.add('show');
+                    document.getElementById('customerName').classList.add('error');
+                    if (!firstErrorField) firstErrorField = document.getElementById('customerName');
+                    isValid = false;
+                }
+
+                // Validate delivery address
+                const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
+                if (!deliveryAddress) {
+                    const errorDiv = document.getElementById('deliveryAddressError');
+                    errorDiv.textContent = 'Xin hãy nhập thông tin địa chỉ giao hàng';
+                    errorDiv.classList.add('show');
+                    document.getElementById('deliveryAddress').classList.add('error');
+                    if (!firstErrorField) firstErrorField = document.getElementById('deliveryAddress');
+                    isValid = false;
+                }
+
+                // Validate delivery date
+                const deliveryDate = document.getElementById('deliveryDate').value.trim();
+                if (!deliveryDate) {
+                    const errorDiv = document.getElementById('deliveryDateError');
+                    errorDiv.textContent = 'Ngày giao hàng không hợp lệ, xin hãy nhập lại';
+                    errorDiv.classList.add('show');
+                    document.getElementById('deliveryDate').classList.add('error');
+                    if (!firstErrorField) firstErrorField = document.getElementById('deliveryDate');
+                    isValid = false;
+                } else {
+                    const dateValidation = validateDate(deliveryDate);
+                    if (!dateValidation.valid) {
+                        const errorDiv = document.getElementById('deliveryDateError');
+                        errorDiv.textContent = dateValidation.message;
+                        errorDiv.classList.add('show');
+                        document.getElementById('deliveryDate').classList.add('error');
+                        if (!firstErrorField) firstErrorField = document.getElementById('deliveryDate');
+                        isValid = false;
+                    }
+                }
+
+                // Validate quantities
+                const invalidProducts = [];
+                document.querySelectorAll('.quantity-input').forEach(input => {
+                    const productId = input.dataset.productId;
+                    const productName = input.dataset.productName;
+                    const availableStock = parseInt(input.dataset.availableStock);
+                    const quantity = input.value.trim();
+
+                    if (quantity) {
+                        if (!/^\d+$/.test(quantity) || parseInt(quantity) <= 0) {
+                            const errorDiv = document.getElementById('qtyError_' + productId);
+                            errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
+                            errorDiv.classList.add('show');
+                            input.classList.add('error');
+                            if (!firstErrorField) firstErrorField = input;
+                            isValid = false;
+                        } else if (parseInt(quantity) > availableStock) {
+                            invalidProducts.push({
+                                name: productName,
+                                stock: availableStock,
+                                input: input
+                            });
+                        }
+                    }
+                });
+
+                // Handle invalid stock quantities
+                if (invalidProducts.length > 0) {
+                    if (invalidProducts.length === 1) {
+                        const product = invalidProducts[0];
+                        const errorDiv = document.getElementById('qtyError_' + product.input.dataset.productId);
+                        errorDiv.textContent = `Số lượng đặt hàng của sản phẩm ${product.name} không đủ trong kho. Xin hãy nhập số lượng <= ${product.stock}`;
+                        errorDiv.classList.add('show');
+                        product.input.classList.add('error');
+                        if (!firstErrorField) firstErrorField = product.input;
+                    } else {
+                        let message = 'Dưới đây các sản phẩm mà số lượng đặt hàng lớn hơn số lượng trong kho. Xin hãy nhập lại số lượng\\n';
+                        invalidProducts.forEach(product => {
+                            message += `\\nSản phẩm ${product.name} có số lượng tồn kho ${product.stock}`;
+                            const errorDiv = document.getElementById('qtyError_' + product.input.dataset.productId);
+                            errorDiv.textContent = `Số lượng tồn kho: ${product.stock}`;
+                            errorDiv.classList.add('show');
+                            product.input.classList.add('error');
+                        });
+                        alert(message);
+                        if (!firstErrorField) firstErrorField = invalidProducts[0].input;
+                    }
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    if (firstErrorField) {
+                        firstErrorField.focus();
+                    }
+                    return;
+                }
+
+                // If all validations pass, submit the form
+                document.getElementById('orderForm').submit();
+            }
+
+            // Cancel order
+            function cancelOrder() {
+                if (!confirm('Bạn có muốn kết thúc đặt hàng quay trở về màn hình danh sách sản phẩm?')) {
+                    return;
+                }
+
                 let url = '/products/list?';
                 if (keyword) {
                     url += 'keyword=' + encodeURIComponent(keyword) + '&';
@@ -232,9 +515,13 @@
                 }
                 url += 'page=' + page;
 
-                // Thêm quantities vào URL để restore
-                productIds.forEach((id, index) => {
-                    url += '&qty_' + id + '=' + quantities[index];
+                // Add quantities to restore
+                document.querySelectorAll('.quantity-input').forEach(input => {
+                    const productId = input.dataset.productId;
+                    const quantity = input.value.trim();
+                    if (quantity) {
+                        url += '&qty_' + productId + '=' + quantity;
+                    }
                 });
 
                 window.location.href = url;
