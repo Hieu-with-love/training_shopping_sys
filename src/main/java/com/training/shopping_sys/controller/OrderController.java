@@ -1,415 +1,165 @@
 package com.training.shopping_sys.controller;
 
-import com.training.shopping_sys.dto.OrderItemDTO;
-import com.training.shopping_sys.entity.MstProduct;
-import com.training.shopping_sys.entity.TrProductOrder;
-import com.training.shopping_sys.entity.TrProductOrderKey;
-import com.training.shopping_sys.repository.MstProductRepository;
-import com.training.shopping_sys.repository.TrProductOrderRepository;
+import com.training.shopping_sys.dto.OrderProductDTO;
+import com.training.shopping_sys.dto.OrderRequestDTO;
+import com.training.shopping_sys.service.OrderService;
+import com.training.shopping_sys.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.Map;
 
 /**
  * Order Controller.
  * 
- * <p>Handles HTTP requests related to order processing including:
- * order placement, confirmation, and success pages. Validates stock
- * availability before creating orders.</p>
+ * <p>Xử lý các HTTP request liên quan đến đặt hàng, bao gồm:
+ * - Hiển thị màn hình đặt hàng
+ * - Submit đơn đặt hàng
+ * - Validation thông tin đặt hàng</p>
  * 
- * <p>Orders are associated with authenticated users and include
- * timestamp tracking. Supports both single and multiple product orders.</p>
+ * <p>Controller làm việc với session để lưu trữ thông tin sản phẩm đã chọn
+ * và với OrderService để xử lý logic nghiệp vụ.</p>
  * 
  * @author Training Team
  * @version 1.0
  * @since 1.0
  */
 @Controller
-@RequestMapping("/orders")
+@RequestMapping("/order")
 @RequiredArgsConstructor
 public class OrderController {
     
-    private final MstProductRepository productRepository;
-    private final TrProductOrderRepository orderRepository;
+    private final OrderService orderService;
+    private final UserService userService;
     
     /**
-     * Display order confirmation page for multiple products.
+     * Hiển thị màn hình đặt hàng.
      * 
-     * <p>Processes order request from product list page, validates stock
-     * availability for each product, and displays order confirmation form.
-     * Preserves search parameters for cancel navigation.</p>
+     * <p>Lấy thông tin user đăng nhập, tên user từ database, và danh sách
+     * sản phẩm đã chọn từ session. Tính toán số lượng khả dụng cho mỗi sản phẩm.</p>
      * 
-     * @param request HTTP request containing product IDs and quantities
-     * @param keyword Search keyword to preserve (optional)
-     * @param producttypeId Product type filter to preserve (optional)
-     * @param page Page number to preserve
-     * @param model Spring MVC Model to pass data to view
-     * @param redirectAttributes Attributes for redirect scenarios
-     * @return Template name "order" or redirect to product list on error
+     * @param session HTTP Session chứa user ID và danh sách sản phẩm
+     * @param model Spring MVC Model để truyền dữ liệu tới view
+     * @return Template name "order" hoặc redirect tới login nếu chưa đăng nhập
      */
-    @PostMapping("/place")
-    public String showOrderPage(
-            HttpServletRequest request,
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "producttypeId", required = false) Long producttypeId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            Model model,
-            RedirectAttributes redirectAttributes) {
-        
-        // Parse products từ request parameters
-        Map<String, String[]> params = request.getParameterMap();
-        List<Long> productIds = new ArrayList<>();
-        List<Integer> quantities = new ArrayList<>();
-        
-        // Tìm tất cả products[i].productId và products[i].quantity
-        int index = 0;
-        while (true) {
-            String productIdKey = "products[" + index + "].productId";
-            String quantityKey = "products[" + index + "].quantity";
-            
-            if (params.containsKey(productIdKey) && params.containsKey(quantityKey)) {
-                productIds.add(Long.parseLong(params.get(productIdKey)[0]));
-                quantities.add(Integer.parseInt(params.get(quantityKey)[0]));
-                index++;
-            } else {
-                break;
-            }
-        }
-        
-        // Kiểm tra có sản phẩm nào không
-        if (productIds.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Không có sản phẩm nào được chọn!");
-            return "redirect:/products/list";
-        }
-        
-        List<OrderItemDTO> orderItems = new ArrayList<>();
-        
-        // Xử lý từng sản phẩm
-        for (int i = 0; i < productIds.size(); i++) {
-            Long productId = productIds.get(i);
-            Integer quantity = quantities.get(i);
-            
-            Optional<MstProduct> productOpt = productRepository.findById(productId);
-            
-            if (productOpt.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
-                return "redirect:/products/list";
-            }
-            
-            MstProduct mstProduct = productOpt.get();
-            
-            // Validate stock availability
-            Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-            Integer availableStock = (mstProduct.getProductAmount() != null ? mstProduct.getProductAmount() : 0) - totalOrdered;
-            
-            if (quantity > availableStock) {
-                redirectAttributes.addFlashAttribute("error", 
-                    String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                        mstProduct.getProductName(), availableStock));
-                return "redirect:/products/list";
-            }
-            
-            // Tạo OrderItemDTO
-            OrderItemDTO item = new OrderItemDTO();
-            item.setProductId(productId);
-            item.setProductName(mstProduct.getProductName());
-            item.setProductDescription(mstProduct.getProductDescription());
-            item.setQuantity(quantity);
-            item.setAvailableStock(availableStock);
-            item.setProducttypeName(mstProduct.getProductType() != null ? mstProduct.getProductType().getProducttypeName() : "");
-            
-            orderItems.add(item);
-        }
-        
-        // Get current user
+    @GetMapping
+    public String showOrderPage(HttpSession session, Model model) {
+        // Lấy thông tin user đăng nhập
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
+        String userId = auth != null ? auth.getName() : null;
         
-        model.addAttribute("orderItems", orderItems);
-        model.addAttribute("username", username);
-        // Lưu search params để truyền lại khi Cancel
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("producttypeId", producttypeId);
-        model.addAttribute("page", page);
-        model.addAttribute("productIds", productIds);
-        model.addAttribute("quantities", quantities);
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        
+        // ⑧ Hiển thị thông tin user
+        String userInfo = userService.getUserInfo(userId);
+        model.addAttribute("userInfo", userInfo);
+        
+        // ① Lấy tên user từ DB
+        String userName = userService.getUserName(userId);
+        model.addAttribute("customerName", userName);
+        
+        // ② ③ Khởi tạo rỗng
+        model.addAttribute("deliveryAddress", "");
+        model.addAttribute("deliveryDate", "");
+        
+        // ④ Lấy danh sách sản phẩm đã chọn từ session
+        @SuppressWarnings("unchecked")
+        List<OrderProductDTO> sessionProducts = (List<OrderProductDTO>) session.getAttribute("orderProducts");
+        
+        List<OrderProductDTO> orderProducts = null;
+        if (sessionProducts != null && !sessionProducts.isEmpty()) {
+            // Tạo ArrayList mới để tránh UnmodifiableList issue
+            orderProducts = new ArrayList<>(sessionProducts);
+            // Tính số lượng available cho mỗi sản phẩm
+            orderProducts = orderService.calculateAvailableQuantity(orderProducts);
+        }
+        
+        model.addAttribute("orderProducts", orderProducts);
         
         return "order";
     }
     
     /**
-     * Display order confirmation page for a single product.
+     * ⑤ Xử lý submit đặt hàng.
      * 
-     * <p>Simpler version of order placement for single product orders.
-     * Validates stock availability and displays confirmation form.</p>
+     * <p>Nhận request đặt hàng từ form, validate và xử lý đơn hàng.
+     * Nếu có lỗi, hiển thị lại form với thông báo lỗi và focus vào field lỗi.
+     * Nếu thành công, xóa orderProducts khỏi session và redirect về trang products.</p>
      * 
-     * @param productId ID of the product to order
-     * @param quantity Quantity to order
-     * @param model Spring MVC Model to pass data to view
-     * @param redirectAttributes Attributes for redirect scenarios
-     * @return Template name "order" or redirect to product list on error
+     * @param orderRequest DTO chứa thông tin đặt hàng từ form
+     * @param session HTTP Session để xóa orderProducts sau khi đặt hàng thành công
+     * @param model Spring MVC Model để truyền dữ liệu khi có lỗi
+     * @param redirectAttributes Attributes để truyền success message
+     * @return Template name "order" nếu có lỗi, redirect tới products nếu thành công
      */
-    @GetMapping("/place")
-    public String showOrderPageSingle(
-            @RequestParam Long productId,
-            @RequestParam Integer quantity,
+    @PostMapping("/submit")
+    public String submitOrder(
+            @ModelAttribute OrderRequestDTO orderRequest,
+            HttpSession session,
             Model model,
             RedirectAttributes redirectAttributes) {
         
-        Optional<MstProduct> productOpt = productRepository.findById(productId);
-        
-        if (productOpt.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại!");
-            return "redirect:/products/list";
-        }
-        
-        MstProduct product = productOpt.get();
-        
-        // Validate stock availability
-        Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-        Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
-        
-        if (quantity > availableStock) {
-            redirectAttributes.addFlashAttribute("error", 
-                String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                    product.getProductName(), availableStock));
-            return "redirect:/products/list";
-        }
-        
-        List<OrderItemDTO> orderItems = new ArrayList<>();
-        OrderItemDTO item = new OrderItemDTO();
-        item.setProductId(productId);
-        item.setProductName(product.getProductName());
-        item.setProductDescription(product.getProductDescription());
-        item.setQuantity(quantity);
-        item.setAvailableStock(availableStock);
-        item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
-        orderItems.add(item);
-        
-        // Get current user
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
+        String userId = auth != null ? auth.getName() : null;
         
-        model.addAttribute("orderItems", orderItems);
-        model.addAttribute("username", username);
-        
-        return "order";
-    }
-    
-    /**
-     * Confirm and process the order.
-     * 
-     * <p>Creates order records in the database for all selected products.
-     * Performs comprehensive validation including:
-     * - Customer name, delivery address, delivery date presence
-     * - Date format (YYYY/MM/DD) and future date validation
-     * - Stock availability for each product
-     * All products in a single order share the same order ID (max+1 from database).</p>
-     * 
-     * @param customerName Name of the customer placing the order (max 200 chars)
-     * @param deliveryAddress Delivery address for the order (max 400 chars)
-     * @param deliveryDate Delivery date in YYYY/MM/DD format (max 10 chars)
-     * @param productIds List of product IDs to order
-     * @param quantities List of quantities corresponding to each product
-     * @param keyword Search keyword to preserve state on cancel
-     * @param producttypeId Product type filter to preserve state on cancel
-     * @param page Current page number to preserve state on cancel
-     * @param redirectAttributes Attributes for success/error messages
-     * @param model Spring MVC Model for error display
-     * @return Redirect to success page or stay on order page with errors
-     */
-    @PostMapping("/confirm")
-    public String confirmOrder(
-            @RequestParam("customerName") String customerName,
-            @RequestParam("deliveryAddress") String deliveryAddress,
-            @RequestParam("deliveryDate") String deliveryDate,
-            @RequestParam("productIds") List<Long> productIds,
-            @RequestParam("quantities") List<Integer> quantities,
-            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
-            @RequestParam(value = "producttypeId", required = false) Long producttypeId,
-            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
-            RedirectAttributes redirectAttributes,
-            Model model) {
-        
-        StringBuilder errorMessages = new StringBuilder();
-        
-        // Validation 1: Check empty customer name
-        if (customerName == null || customerName.trim().isEmpty()) {
-            errorMessages.append("Người đặt hàng không được để trống.<br>");
+        if (userId == null) {
+            return "redirect:/login";
         }
         
-        // Validation 2: Check empty delivery address
-        if (deliveryAddress == null || deliveryAddress.trim().isEmpty()) {
-            errorMessages.append("Địa chỉ giao hàng không được để trống.<br>");
-        }
-        
-        // Validation 3: Check empty delivery date
-        if (deliveryDate == null || deliveryDate.trim().isEmpty()) {
-            errorMessages.append("Ngày giao hàng không được để trống.<br>");
-        } else {
-            // Validation 4: Check date format YYYY/MM/DD
-            if (!deliveryDate.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
-                errorMessages.append("Ngày giao hàng không đúng định dạng YYYY/MM/DD.<br>");
-            } else {
-                // Validation 5: Check date is not in the past
-                try {
-                    LocalDate deliveryLocalDate = LocalDate.parse(deliveryDate,
-                        java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-                    LocalDate today = LocalDate.now();
-                    
-                    if (deliveryLocalDate.isBefore(today)) {
-                        errorMessages.append("Ngày giao hàng phải từ ngày hiện tại trở về sau.<br>");
-                    }
-                } catch (Exception e) {
-                    errorMessages.append("Ngày giao hàng không hợp lệ.<br>");
-                }
-            }
-        }
-        
-        // Validation 6: Check stock availability for each product
-        List<String> stockErrors = new ArrayList<>();
-        for (int i = 0; i < productIds.size(); i++) {
-            Long productId = productIds.get(i);
-            Integer quantity = quantities.get(i);
+        try {
+            // Validate và xử lý đặt hàng
+            String result = orderService.processOrder(orderRequest, userId);
             
-            Optional<MstProduct> productOpt = productRepository.findById(productId);
-            if (productOpt.isPresent()) {
-                MstProduct product = productOpt.get();
-                Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-                Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
+            if (result.startsWith("ERROR:")) {
+                // Có lỗi validation
+                String[] parts = result.split(":", 3);
+                String errorMessage = parts[1];
+                String focusField = parts.length > 2 ? parts[2] : "";
                 
-                if (quantity > availableStock) {
-                    stockErrors.add(String.format("Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d", 
-                        product.getProductName(), availableStock));
-                }
-            }
-        }
-        
-        // Add stock errors to main error messages
-        for (String stockError : stockErrors) {
-            errorMessages.append(stockError).append("<br>");
-        }
-        
-        // If there are any errors, return to order page with error messages
-        if (errorMessages.length() > 0) {
-            // Rebuild order items for display
-            List<OrderItemDTO> orderItems = new ArrayList<>();
-            for (int i = 0; i < productIds.size(); i++) {
-                Long productId = productIds.get(i);
-                Integer quantity = quantities.get(i);
+                // Giữ lại dữ liệu đã nhập
+                model.addAttribute("customerName", orderRequest.getCustomerName());
+                model.addAttribute("deliveryAddress", orderRequest.getDeliveryAddress());
+                model.addAttribute("deliveryDate", orderRequest.getDeliveryDate());
+                model.addAttribute("orderProducts", orderRequest.getProducts());
+                model.addAttribute("errorMessage", errorMessage);
+                model.addAttribute("focusField", focusField);
                 
-                Optional<MstProduct> productOpt = productRepository.findById(productId);
-                if (productOpt.isPresent()) {
-                    MstProduct product = productOpt.get();
-                    Integer totalOrdered = orderRepository.getTotalOrderedAmount(productId);
-                    Integer availableStock = (product.getProductAmount() != null ? product.getProductAmount() : 0) - totalOrdered;
-                    
-                    OrderItemDTO item = new OrderItemDTO();
-                    item.setProductId(productId);
-                    item.setProductName(product.getProductName());
-                    item.setProductDescription(product.getProductDescription());
-                    item.setQuantity(quantity);
-                    item.setAvailableStock(availableStock);
-                    item.setProducttypeName(product.getProductType() != null ? product.getProductType().getProducttypeName() : "");
-                    orderItems.add(item);
-                }
+                // Hiển thị lại thông tin user
+                String userInfo = userService.getUserInfo(userId);
+                model.addAttribute("userInfo", userInfo);
+                
+                return "order";
             }
             
-            // Get current user
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String username = auth.getName();
+            // Thành công
+            session.removeAttribute("orderProducts");
+            redirectAttributes.addFlashAttribute("successMessage", "Xử lý đặt hàng đã thành công");
+            return "redirect:/products/list";
             
-            model.addAttribute("orderItems", orderItems);
-            model.addAttribute("username", username);
-            model.addAttribute("customerName", customerName);
-            model.addAttribute("deliveryAddress", deliveryAddress);
-            model.addAttribute("deliveryDate", deliveryDate);
-            model.addAttribute("error", errorMessages.toString());
-            model.addAttribute("keyword", keyword);
-            model.addAttribute("producttypeId", producttypeId);
-            model.addAttribute("page", page);
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("errorMessage", "Xử lý đặt hàng thất bại");
+            
+            // Giữ lại dữ liệu
+            model.addAttribute("customerName", orderRequest.getCustomerName());
+            model.addAttribute("deliveryAddress", orderRequest.getDeliveryAddress());
+            model.addAttribute("deliveryDate", orderRequest.getDeliveryDate());
+            model.addAttribute("orderProducts", orderRequest.getProducts());
+            
+            String userInfo = userService.getUserInfo(userId);
+            model.addAttribute("userInfo", userInfo);
             
             return "order";
         }
-        
-        // All validations passed, proceed with order creation
-        try {
-            // Get current user info
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String username = auth.getName();
-            
-            // Calculate max(order_id) + 1 for new order ID using optimized JPQL
-            Long orderId = orderRepository.findMaxOrderId()
-                .map(maxId -> maxId + 1)
-                .orElse(1L);
-            
-            // Convert deliveryDate from YYYY/MM/DD to YYYYMMDD for database storage
-            String deliveryDateDb = deliveryDate.replace("/", "");
-            
-            // Create order records for each product
-            for (int i = 0; i < productIds.size(); i++) {
-                Long productId = productIds.get(i);
-                Integer quantity = quantities.get(i);
-                
-                // Create composite key
-                TrProductOrderKey orderKey = new TrProductOrderKey();
-                orderKey.setOrderId(orderId);
-                orderKey.setCustomerName(customerName);
-                orderKey.setProductId(productId);
-                
-                // Create order
-                TrProductOrder order = new TrProductOrder();
-                order.setId(orderKey);
-                order.setOrderProductAmount(quantity);
-                order.setOrderDate(LocalDateTime.now());
-                order.setOrderDeliveryAddress(deliveryAddress);
-                order.setOrderDeliveryDate(deliveryDateDb);
-                
-                orderRepository.save(order);
-            }
-            
-            redirectAttributes.addFlashAttribute("message", 
-                "Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận.");
-            
-            return "redirect:/orders/success";
-            
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", 
-                "Có lỗi xảy ra khi đặt hàng: " + e.getMessage());
-            return "redirect:/products/list";
-        }
-    }
-    
-    /**
-     * Display order success page.
-     * 
-     * <p>Shows confirmation message after successful order placement.
-     * Redirects user to a clean state without search parameters.</p>
-     * 
-     * @param redirectAttributes Attributes for success message
-     * @return Template name "order-success"
-     */
-    @GetMapping("/success")
-    public String orderSuccess(RedirectAttributes redirectAttributes) {
-        // Sau khi success, về trang init (không params)
-        redirectAttributes.addFlashAttribute("successMessage", 
-            "Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận.");
-        return "order-success";
     }
 }
+

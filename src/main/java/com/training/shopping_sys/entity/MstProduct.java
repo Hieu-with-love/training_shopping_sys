@@ -53,6 +53,10 @@ public class MstProduct {
     @JoinColumn(name = "producttype_id", insertable = false, updatable = false)
     private MstProductType productType;
     
+    /** Price of the product in VND. */
+    @Column(name = "product_price")
+    private Integer productPrice;
+    
     /** Available stock amount for the product. */
     @Column(name = "product_amount")
     private Integer productAmount;

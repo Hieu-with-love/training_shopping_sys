@@ -21,6 +21,10 @@ import org.springframework.stereotype.Repository;
  * - Sorting by popularity (total orders)
  * </p>
  * 
+ * <p>Key methods:
+ * - findById: Lấy thông tin sản phẩm theo ID (từ JpaRepository)
+ * - searchProducts: Tìm kiếm sản phẩm với pagination</p>
+ * 
  * @author Training Team
  * @version 1.0
  * @since 1.0
@@ -38,6 +42,10 @@ public interface MstProductRepository extends JpaRepository<MstProduct, Long> {
      * - Joins with order table to calculate total ordered amounts
      * - Returns paginated results with sorting support
      * </p>
+     * 
+     * <p>Được sử dụng trong:
+     * - ProductService.searchProducts(): Tìm kiếm sản phẩm trên trang product-list
+     * - Hiển thị danh sách sản phẩm với thông tin tồn kho</p>
      * 
      * @param keyword Search keyword for product name/description (optional)
      * @param producttypeId Filter by product type ID (optional)

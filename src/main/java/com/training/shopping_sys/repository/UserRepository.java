@@ -23,7 +23,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Find user by username.
      * 
      * <p>Used for authentication to retrieve user credentials and role.
-     * Username is unique in the system.</p>
+     * Username is unique in the system. Also used to get user information
+     * and user name for order processing.</p>
      * 
      * @param username Username to search for
      * @return Optional containing User if found, empty otherwise

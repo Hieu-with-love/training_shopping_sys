@@ -536,18 +536,13 @@
                 // Tạo form để submit nhiều sản phẩm
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '/orders/place';
+                form.action = '/products/toOrder';
 
                 selectedProducts.forEach((product, index) => {
-                    const productIdInput = document.createElement('input');
-                    productIdInput.type = 'hidden';
-                    productIdInput.name = `products[${index}].productId`;
-                    productIdInput.value = product.productId;
-                    form.appendChild(productIdInput);
-
+                    // Sử dụng format quantity_{productId} để match với ProductController
                     const quantityInput = document.createElement('input');
                     quantityInput.type = 'hidden';
-                    quantityInput.name = `products[${index}].quantity`;
+                    quantityInput.name = `quantity_${product.productId}`;
                     quantityInput.value = product.quantity;
                     form.appendChild(quantityInput);
                 });

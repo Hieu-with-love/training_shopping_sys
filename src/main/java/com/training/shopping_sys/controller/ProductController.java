@@ -1,5 +1,6 @@
 package com.training.shopping_sys.controller;
 
+import com.training.shopping_sys.dto.OrderProductDTO;
 import com.training.shopping_sys.dto.ProductSearchResultDTO;
 import com.training.shopping_sys.dto.StockValidationDTO;
 import com.training.shopping_sys.entity.MstProduct;
@@ -33,10 +34,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpSession;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,8 +91,11 @@ public class ProductController {
     public String showProductList(
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "producttypeId", required = false) Long producttypeId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "page", required = false) Integer page,
             Model model) {
+        
+        // Default page to 0 if null or negative
+        int pageNumber = (page != null && page >= 0) ? page : 0;
         
         // Get all active product types for dropdown
         List<MstProductType> productTypes = productService.getAllActiveProductTypes();
@@ -97,7 +104,7 @@ public class ProductController {
         // Perform search only if keyword or producttypeId is provided
         ProductSearchResultDTO searchResult = null;
         if ((keyword != null && !keyword.trim().isEmpty()) || producttypeId != null) {
-            searchResult = productService.searchProducts(keyword, producttypeId, page);
+            searchResult = productService.searchProducts(keyword, producttypeId, pageNumber);
         }
         
         model.addAttribute("searchResult", searchResult);
@@ -272,5 +279,71 @@ public class ProductController {
         response.put("count", count);
         
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Chuyển sang trang đặt hàng.
+     * 
+     * <p>Xử lý request từ product list page, lấy danh sách sản phẩm có số lượng > 0,
+     * lưu vào session và chuyển hướng sang trang order.</p>
+     * 
+     * @param quantities Map chứa quantity cho từng product (key: "quantity_{productId}")
+     * @param session HTTP Session để lưu orderProducts
+     * @param redirectAttributes Attributes để truyền message
+     * @return Redirect tới trang order
+     */
+    @PostMapping("/toOrder")
+    public String toOrderPage(
+            @RequestParam Map<String, String> quantities,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        
+        // Lấy danh sách sản phẩm có số lượng > 0
+        List<OrderProductDTO> orderProducts = new ArrayList<>();
+        
+        for (Map.Entry<String, String> entry : quantities.entrySet()) {
+            if (entry.getKey().startsWith("quantity_")) {
+                String productIdStr = entry.getKey().replace("quantity_", "");
+                String quantityStr = entry.getValue();
+                
+                if (quantityStr != null && !quantityStr.trim().isEmpty()) {
+                    try {
+                        Long productId = Long.parseLong(productIdStr);
+                        int quantity = Integer.parseInt(quantityStr);
+                        
+                        if (quantity > 0) {
+                            // Lấy thông tin sản phẩm từ DB
+                            Optional<MstProduct> productOpt = productRepository.findById(productId);
+                            
+                            if (productOpt.isPresent()) {
+                                MstProduct product = productOpt.get();
+                                
+                                OrderProductDTO orderProduct = OrderProductDTO.builder()
+                                    .productId(productId)
+                                    .productName(product.getProductName())
+                                    .price(product.getProductPrice())
+                                    .orderQuantity(quantity)
+                                    .build();
+                                
+                                orderProducts.add(orderProduct);
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        // Skip invalid quantity
+                        log.warn("Invalid quantity format: {}", quantityStr);
+                    }
+                }
+            }
+        }
+        
+        if (orderProducts.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Xin hãy chọn ít nhất một sản phẩm để đặt hàng");
+            return "redirect:/products/list";
+        }
+        
+        // Lưu vào session
+        session.setAttribute("orderProducts", orderProducts);
+        
+        return "redirect:/order";
     }
 }
