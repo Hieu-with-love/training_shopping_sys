@@ -91,9 +91,12 @@ public class OrderController {
     /**
      * ⑤ Xử lý submit đặt hàng.
      * 
-     * <p>Nhận request đặt hàng từ form, validate và xử lý đơn hàng.
-     * Nếu có lỗi, hiển thị lại form với thông báo lỗi và focus vào field lỗi.
-     * Nếu thành công, xóa orderProducts khỏi session và redirect về trang products.</p>
+     * <p>Controller Layer: Điều hướng + Transaction Management
+     * - Xác thực user đăng nhập
+     * - Gọi Service để validate nghiệp vụ và xử lý insert
+     * - Xử lý transaction commit/rollback (đã có @Transactional ở Service)
+     * - Điều hướng về màn hình phù hợp với kết quả
+     * - Hiển thị message thông qua alert và focus vào field lỗi</p>
      * 
      * @param orderRequest DTO chứa thông tin đặt hàng từ form
      * @param session HTTP Session để xóa orderProducts sau khi đặt hàng thành công
@@ -116,20 +119,36 @@ public class OrderController {
         }
         
         try {
-            // Validate và xử lý đặt hàng
+            // Gọi Service layer để validate nghiệp vụ và xử lý insert
+            // Service sẽ tự động commit/rollback thông qua @Transactional
             String result = orderService.processOrder(orderRequest, userId);
             
             if (result.startsWith("ERROR:")) {
-                // Có lỗi validation
+                // Có lỗi validation - trả về từ Service layer
                 String[] parts = result.split(":", 3);
                 String errorMessage = parts[1];
                 String focusField = parts.length > 2 ? parts[2] : "";
                 
-                // Giữ lại dữ liệu đã nhập
+                // Giữ lại dữ liệu đã nhập để hiển thị lại form
                 model.addAttribute("customerName", orderRequest.getCustomerName());
                 model.addAttribute("deliveryAddress", orderRequest.getDeliveryAddress());
                 model.addAttribute("deliveryDate", orderRequest.getDeliveryDate());
-                model.addAttribute("orderProducts", orderRequest.getProducts());
+                
+                // Lấy lại danh sách sản phẩm từ session và tính toán available quantity
+                @SuppressWarnings("unchecked")
+                List<OrderProductDTO> sessionProducts = (List<OrderProductDTO>) session.getAttribute("orderProducts");
+                if (sessionProducts != null && !sessionProducts.isEmpty()) {
+                    List<OrderProductDTO> orderProducts = new ArrayList<>(sessionProducts);
+                    // Cập nhật số lượng đặt hàng từ request
+                    if (orderRequest.getProducts() != null) {
+                        for (int i = 0; i < orderProducts.size() && i < orderRequest.getProducts().size(); i++) {
+                            orderProducts.get(i).setOrderQuantity(orderRequest.getProducts().get(i).getOrderQuantity());
+                        }
+                    }
+                    orderProducts = orderService.calculateAvailableQuantity(orderProducts);
+                    model.addAttribute("orderProducts", orderProducts);
+                }
+                
                 model.addAttribute("errorMessage", errorMessage);
                 model.addAttribute("focusField", focusField);
                 
@@ -140,26 +159,62 @@ public class OrderController {
                 return "order";
             }
             
-            // Thành công
+            // Thành công - Transaction đã được commit tự động bởi @Transactional
+            // Clear all session data liên quan đến order và search
             session.removeAttribute("orderProducts");
+            session.removeAttribute("searchKeyword");
+            session.removeAttribute("searchProductTypeId");
+            session.removeAttribute("searchPage");
+            session.removeAttribute("productQuantities");
             redirectAttributes.addFlashAttribute("successMessage", "Xử lý đặt hàng đã thành công");
             return "redirect:/products/list";
             
         } catch (Exception e) {
+            // Exception - Transaction đã được rollback tự động bởi @Transactional
             e.printStackTrace();
-            model.addAttribute("errorMessage", "Xử lý đặt hàng thất bại");
             
             // Giữ lại dữ liệu
             model.addAttribute("customerName", orderRequest.getCustomerName());
             model.addAttribute("deliveryAddress", orderRequest.getDeliveryAddress());
             model.addAttribute("deliveryDate", orderRequest.getDeliveryDate());
-            model.addAttribute("orderProducts", orderRequest.getProducts());
+            
+            // Lấy lại danh sách sản phẩm từ session
+            @SuppressWarnings("unchecked")
+            List<OrderProductDTO> sessionProducts = (List<OrderProductDTO>) session.getAttribute("orderProducts");
+            if (sessionProducts != null && !sessionProducts.isEmpty()) {
+                List<OrderProductDTO> orderProducts = new ArrayList<>(sessionProducts);
+                if (orderRequest.getProducts() != null) {
+                    for (int i = 0; i < orderProducts.size() && i < orderRequest.getProducts().size(); i++) {
+                        orderProducts.get(i).setOrderQuantity(orderRequest.getProducts().get(i).getOrderQuantity());
+                    }
+                }
+                orderProducts = orderService.calculateAvailableQuantity(orderProducts);
+                model.addAttribute("orderProducts", orderProducts);
+            }
+            
+            model.addAttribute("errorMessage", "Xử lý đặt hàng thất bại");
             
             String userInfo = userService.getUserInfo(userId);
             model.addAttribute("userInfo", userInfo);
             
             return "order";
         }
+    }
+    
+    /**
+     * Xử lý cancel order - quay về product list với search state được khôi phục.
+     * 
+     * <p>Lấy search state từ session (keyword, producttypeId, page) và
+     * redirect về product list page với các tham số này.</p>
+     * 
+     * @param session HTTP Session chứa search state
+     * @return Redirect tới product list với search parameters
+     */
+    @GetMapping("/cancel")
+    public String cancelOrder(HttpSession session) {
+        // Không xóa session data để có thể restore
+        // Chỉ redirect về product list, ProductController sẽ tự restore từ session
+        return "redirect:/products/list";
     }
 }
 

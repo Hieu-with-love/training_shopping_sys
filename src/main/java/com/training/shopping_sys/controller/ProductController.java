@@ -92,7 +92,18 @@ public class ProductController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "producttypeId", required = false) Long producttypeId,
             @RequestParam(value = "page", required = false) Integer page,
+            HttpSession session,
             Model model) {
+        
+        // Restore search state từ session nếu có (khi quay lại từ order page)
+        if (keyword == null && producttypeId == null && page == null) {
+            keyword = (String) session.getAttribute("searchKeyword");
+            producttypeId = (Long) session.getAttribute("searchProductTypeId");
+            Integer sessionPage = (Integer) session.getAttribute("searchPage");
+            if (sessionPage != null) {
+                page = sessionPage;
+            }
+        }
         
         // Default page to 0 if null or negative
         int pageNumber = (page != null && page >= 0) ? page : 0;
@@ -108,6 +119,13 @@ public class ProductController {
         }
         
         model.addAttribute("searchResult", searchResult);
+        
+        // Restore product quantities từ session nếu có
+        @SuppressWarnings("unchecked")
+        Map<Long, Integer> productQuantities = (Map<Long, Integer>) session.getAttribute("productQuantities");
+        if (productQuantities != null) {
+            model.addAttribute("productQuantities", productQuantities);
+        }
         
         return "product-list";
     }
@@ -287,14 +305,27 @@ public class ProductController {
      * <p>Xử lý request từ product list page, lấy danh sách sản phẩm có số lượng > 0,
      * lưu vào session và chuyển hướng sang trang order.</p>
      * 
+     * <p>Session sẽ lưu:
+     * - orderProducts: danh sách sản phẩm đã chọn
+     * - searchKeyword: từ khóa tìm kiếm
+     * - searchProductTypeId: loại sản phẩm đã chọn
+     * - searchPage: trang hiện tại
+     * - productQuantities: Map số lượng đã nhập cho từng sản phẩm</p>
+     * 
      * @param quantities Map chứa quantity cho từng product (key: "quantity_{productId}")
-     * @param session HTTP Session để lưu orderProducts
+     * @param keyword Search keyword từ form
+     * @param producttypeId Product type ID từ form
+     * @param page Page number từ form
+     * @param session HTTP Session để lưu orderProducts và search state
      * @param redirectAttributes Attributes để truyền message
      * @return Redirect tới trang order
      */
     @PostMapping("/toOrder")
     public String toOrderPage(
             @RequestParam Map<String, String> quantities,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "producttypeId", required = false) Long producttypeId,
+            @RequestParam(value = "page", required = false) Integer page,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         
@@ -341,8 +372,33 @@ public class ProductController {
             return "redirect:/products/list";
         }
         
-        // Lưu vào session
+        // Lưu orderProducts vào session
         session.setAttribute("orderProducts", orderProducts);
+        
+        // Lưu search state vào session để restore khi cancel
+        session.setAttribute("searchKeyword", keyword);
+        session.setAttribute("searchProductTypeId", producttypeId);
+        session.setAttribute("searchPage", page != null ? page : 0);
+        
+        // Lưu tất cả quantities đã nhập vào session (bao gồm cả những sản phẩm có quantity = 0)
+        Map<Long, Integer> productQuantities = new HashMap<>();
+        for (Map.Entry<String, String> entry : quantities.entrySet()) {
+            if (entry.getKey().startsWith("quantity_")) {
+                String productIdStr = entry.getKey().replace("quantity_", "");
+                String quantityStr = entry.getValue();
+                
+                if (quantityStr != null && !quantityStr.trim().isEmpty()) {
+                    try {
+                        Long productId = Long.parseLong(productIdStr);
+                        int quantity = Integer.parseInt(quantityStr);
+                        productQuantities.put(productId, quantity);
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid quantity format: {}", quantityStr);
+                    }
+                }
+            }
+        }
+        session.setAttribute("productQuantities", productQuantities);
         
         return "redirect:/order";
     }

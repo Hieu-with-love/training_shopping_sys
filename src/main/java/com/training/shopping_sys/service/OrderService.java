@@ -62,32 +62,51 @@ public class OrderService {
     }
     
     /**
-     * ⑤ Xử lý đặt hàng với validation.
+     * ⑤ Xử lý đặt hàng với validation nghiệp vụ.
      * 
-     * <p>Thực hiện các validation sau:
-     * 1. Validate người đặt hàng (bắt buộc)
-     * 2. Validate địa chỉ giao hàng (bắt buộc)
-     * 3. Validate ngày giao hàng (định dạng YYYY/MM/DD và >= ngày hiện tại)
-     * 4. Validate số lượng đặt hàng không vượt quá số lượng tồn kho</p>
+     * <p>Service Layer: Validate nghiệp vụ + Insert Data
      * 
-     * <p>Nếu validation thành công, tạo đơn hàng mới và lưu vào database.</p>
+     * Thực hiện validate theo thứ tự:
+     * 1. ① Validate người đặt hàng (bắt buộc, max 200 ký tự)
+     * 2. ② Validate địa chỉ giao hàng (bắt buộc, max 400 ký tự)
+     * 3. ③ Validate ngày giao hàng:
+     *    - Định dạng YYYY/MM/DD
+     *    - Ngày hợp lệ
+     *    - Ngày giao hàng >= ngày hiện tại
+     * 4. Validate số lượng đặt hàng của từng sản phẩm:
+     *    - Số lượng đặt <= (product_amount - sum(order_product_amount))
+     *    - Nếu 1 sản phẩm lỗi: hiển thị message cho sản phẩm đó, focus vào quantity của sản phẩm
+     *    - Nếu nhiều sản phẩm lỗi: hiển thị danh sách tất cả sản phẩm lỗi, focus vào quantity của sản phẩm đầu tiên
+     * 
+     * Nếu validate thành công:
+     * - Lấy order_id mới = max(order_id) + 1
+     * - Insert từng sản phẩm vào trproductorder
+     * - Transaction được quản lý bởi @Transactional (auto commit/rollback)
+     * </p>
      * 
      * @param orderRequest Request đặt hàng từ form
      * @param userId ID của user đang đặt hàng
      * @return "SUCCESS" nếu thành công, "ERROR:message:focusField" nếu có lỗi
+     * @throws RuntimeException nếu có lỗi database (sẽ trigger rollback)
      */
     @Transactional
     public String processOrder(OrderRequestDTO orderRequest, String userId) {
         
-        // Validate ① Người đặt hàng
+        // Validate ① Người đặt hàng - bắt buộc nhập
         if (orderRequest.getCustomerName() == null || orderRequest.getCustomerName().trim().isEmpty()) {
             return "ERROR:Xin hãy nhập thông tin người đặt hàng:customerName";
         }
         
-        // Validate ② Địa chỉ giao hàng
+        // Validate ② Địa chỉ giao hàng - bắt buộc nhập
         if (orderRequest.getDeliveryAddress() == null || orderRequest.getDeliveryAddress().trim().isEmpty()) {
             return "ERROR:Xin hãy nhập thông tin địa chỉ giao hàng:deliveryAddress";
         }
+
+        // Validate ③ Ngày giao hàng - bắt buộc nhập
+        if (orderRequest.getDeliveryDate() == null || orderRequest.getDeliveryDate().trim().isEmpty()) {
+            return "ERROR:Xin hãy nhập thông tin ngày giao hàng:deliveryDate";
+        }
+
         
         // Validate ③ Ngày giao hàng
         String deliveryDateStr = orderRequest.getDeliveryDate();
@@ -95,24 +114,27 @@ public class OrderService {
         
         if (deliveryDateStr != null && !deliveryDateStr.trim().isEmpty()) {
             try {
+                // Kiểm tra định dạng YYYY/MM/DD
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
                 deliveryDate = LocalDate.parse(deliveryDateStr, formatter);
                 
-                // Kiểm tra ngày >= ngày hiện tại
+                // Kiểm tra ngày giao hàng >= ngày hiện tại
                 if (deliveryDate.isBefore(LocalDate.now())) {
                     return "ERROR:Ngày giao hàng không hợp lệ, xin hãy nhập lại:deliveryDate";
                 }
             } catch (DateTimeParseException e) {
+                // Định dạng không hợp lệ hoặc ngày không hợp lệ
                 return "ERROR:Ngày giao hàng không hợp lệ, xin hãy nhập lại:deliveryDate";
             }
         }
         
-        // Validate số lượng sản phẩm
+        // Validate danh sách sản phẩm không rỗng
         List<OrderProductDTO> products = orderRequest.getProducts();
         if (products == null || products.isEmpty()) {
             return "ERROR:Không có sản phẩm nào để đặt hàng:customerName";
         }
         
+        // Validate số lượng đặt hàng của từng sản phẩm
         List<String> invalidProducts = new ArrayList<>();
         int firstInvalidIndex = -1;
         OrderProductDTO firstInvalidProduct = null;
@@ -120,20 +142,25 @@ public class OrderService {
         for (int i = 0; i < products.size(); i++) {
             OrderProductDTO product = products.get(i);
             
+            // Chỉ validate sản phẩm có số lượng đặt hàng > 0
             if (product.getOrderQuantity() != null && product.getOrderQuantity() > 0) {
-                // Lấy tổng số lượng trong kho
+                // Lấy số lượng tồn kho từ mstproduct
                 Integer totalAmount = productRepository.findById(product.getProductId())
                         .map(p -> p.getProductAmount())
                         .orElse(0);
                 
-                // Lấy số lượng đã đặt hàng
+                // Lấy tổng số lượng đã đặt hàng từ trproductorder
                 Integer orderedAmount = productOrderRepository.getTotalOrderedAmount(product.getProductId());
+                
+                // Tính số lượng khả dụng = tồn kho - đã đặt
                 Integer availableQuantity = totalAmount - orderedAmount;
                 
+                // Kiểm tra số lượng đặt hàng > số lượng khả dụng
                 if (product.getOrderQuantity() > availableQuantity) {
                     invalidProducts.add(String.format("Sản phẩm %s có số lượng tồn kho %d", 
                         product.getProductName(), availableQuantity));
                     
+                    // Lưu sản phẩm lỗi đầu tiên để focus
                     if (firstInvalidIndex == -1) {
                         firstInvalidIndex = i;
                         firstInvalidProduct = product;
@@ -143,59 +170,69 @@ public class OrderService {
             }
         }
         
-        // Nếu có sản phẩm không hợp lệ
+        // Nếu có sản phẩm không hợp lệ về số lượng
         if (!invalidProducts.isEmpty()) {
             if (invalidProducts.size() == 1 && firstInvalidProduct != null) {
+                // Chỉ có 1 sản phẩm lỗi
                 return String.format("ERROR:Số lượng đặt hàng của sản phẩm %s không đủ trong kho. Xin hãy nhập số lượng <= %d:quantity_%d",
                     firstInvalidProduct.getProductName(), 
                     firstInvalidProduct.getAvailableQuantity(),
                     firstInvalidIndex);
             } else {
+                // Có nhiều sản phẩm lỗi - hiển thị danh sách
                 StringBuilder message = new StringBuilder("Dưới đây các sản phẩm mà số lượng đặt hàng lớn hơn số lượng trong kho. Xin hãy nhập lại số lượng\\n");
                 for (String invalidProduct : invalidProducts) {
                     message.append(invalidProduct).append("\\n");
                 }
-                return "ERROR:" + message.toString() + ":quantity_0";
+                return "ERROR:" + message.toString() + ":quantity_" + firstInvalidIndex;
             }
         }
         
-        // Lấy order ID mới
+        // Validation thành công - bắt đầu xử lý insert
+        
+        // Lấy order ID mới = max(order_id) + 1
         Long maxOrderId = productOrderRepository.findMaxOrderId().orElse(0L);
         Long newOrderId = maxOrderId + 1;
         
-        // Insert data
+        // Insert data cho từng sản phẩm
         try {
+            // Format ngày giao hàng theo YYYYMMDD
             String deliveryDateFormatted = deliveryDate != null ? 
                 deliveryDate.format(DateTimeFormatter.ofPattern("yyyyMMdd")) : null;
             
             LocalDateTime now = LocalDateTime.now();
             
+            // Insert từng sản phẩm có số lượng đặt hàng > 0
             for (OrderProductDTO product : products) {
                 if (product.getOrderQuantity() != null && product.getOrderQuantity() > 0) {
+                    
                     // Tạo composite key
                     TrProductOrderKey key = TrProductOrderKey.builder()
-                        .orderId(newOrderId)
-                        .customerName(orderRequest.getCustomerName())
-                        .productId(product.getProductId())
+                        .orderId(newOrderId)                        // order_id mới
+                        .customerName(orderRequest.getCustomerName()) // từ input ①
+                        .productId(product.getProductId())          // id sản phẩm
                         .build();
                     
                     // Tạo order entity
                     TrProductOrder order = TrProductOrder.builder()
                         .id(key)
-                        .orderProductAmount(product.getOrderQuantity())
-                        .orderDeliveryAddress(orderRequest.getDeliveryAddress())
-                        .orderDeliveryDate(deliveryDateFormatted)
-                        .orderDate(now)
+                        .orderProductAmount(product.getOrderQuantity())           // số lượng đặt hàng
+                        .orderDeliveryAddress(orderRequest.getDeliveryAddress())  // từ input ②
+                        .orderDeliveryDate(deliveryDateFormatted)                 // từ input ③, format YYYYMMDD
+                        .orderDate(now)                                           // CURRENT_TIMESTAMP
                         .build();
                     
+                    // Save vào database
                     productOrderRepository.save(order);
                 }
             }
             
+            // Transaction sẽ được commit tự động khi method kết thúc thành công
             return "SUCCESS";
             
         } catch (Exception e) {
-            throw new RuntimeException("Database error", e);
+            // Transaction sẽ được rollback tự động khi có exception
+            throw new RuntimeException("Database error: " + e.getMessage(), e);
         }
     }
 }

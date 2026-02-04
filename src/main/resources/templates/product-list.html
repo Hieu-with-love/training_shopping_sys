@@ -314,8 +314,9 @@
                             <td th:text="${product.productDescription}">Description</td>
                             <td>
                                 <div class="quantity-wrapper">
-                                    <input type="text" class="quantity-input" min="0" value="" placeholder="0"
-                                        th:id="'quantity-' + ${product.productId}"
+                                    <input type="text" class="quantity-input" min="0"
+                                        th:value="${productQuantities != null && productQuantities.get(product.productId) != null ? productQuantities.get(product.productId) : ''}"
+                                        placeholder="0" th:id="'quantity-' + ${product.productId}"
                                         th:data-product-id="${product.productId}"
                                         th:data-product-name="${product.productName}"
                                         oninput="handleQuantityInput(this)" onblur="validateQuantityOnBlur(this)"

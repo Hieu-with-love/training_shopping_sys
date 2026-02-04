@@ -3,54 +3,173 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Đặt hàng</title>
+    <title>Đặt hàng - Shopping System</title>
     <style>
-        .error {
-            color: red;
-            margin: 10px 0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .success {
-            color: green;
-            margin: 10px 0;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
         }
 
-        .product-list {
-            margin: 20px 0;
-        }
-
-        .product-item {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 5px 0;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .user-info {
             text-align: right;
             padding: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .user-info span {
+            margin-right: 15px;
+            font-weight: 500;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
         }
 
         .form-group {
-            margin: 15px 0;
+            margin: 20px 0;
         }
 
         label {
             display: inline-block;
             width: 200px;
-            font-weight: bold;
+            font-weight: 600;
+            color: #555;
         }
 
         input[type="text"] {
-            padding: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+
+        .required {
+            color: red;
+            margin-left: 3px;
+        }
+
+        .product-list {
+            margin: 30px 0;
+        }
+
+        .product-list h3 {
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .product-item {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            background-color: #fafafa;
+            transition: box-shadow 0.3s;
+        }
+
+        .product-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-item strong {
+            color: #333;
+            font-size: 16px;
+        }
+
+        .product-item label {
+            display: inline;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .quantity-input {
+            width: 80px !important;
+            text-align: center;
+        }
+
+        .stock-info {
+            color: #666;
+            font-size: 13px;
+            margin-left: 10px;
         }
 
         .buttons {
-            margin: 20px 0;
+            margin: 30px 0;
+            text-align: center;
         }
 
         button {
-            padding: 10px 20px;
-            margin: 5px;
+            padding: 12px 30px;
+            margin: 0 10px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #45a049;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button[type="button"] {
+            background-color: #f44336;
+            color: white;
+        }
+
+        button[type="button"]:hover {
+            background-color: #da190b;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .logout-btn {
+            background-color: #FF9800;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background-color: #F57C00;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -59,47 +178,43 @@
     <div class="container">
         <!-- ⑧ Thông tin user -->
         <div class="user-info">
-            <span th:text="${userInfo}"></span>
+            <span th:text="${userInfo}">User Info</span>
             <!-- ⑨ Button Đăng xuất -->
-            <button onclick="logout()">Đăng xuất</button>
+            <button class="logout-btn" onclick="logout()">Đăng xuất</button>
         </div>
 
-        <h2>Đặt hàng</h2>
-
-        <!-- Hiển thị error message -->
-        <div class="error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-
-        <!-- Hiển thị success message -->
-        <div class="success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <h2>🛒 Đặt Hàng</h2>
 
         <form id="orderForm" th:action="@{/order/submit}" method="post">
 
             <!-- ① Người đặt hàng -->
             <div class="form-group">
-                <label for="customerName">Người đặt hàng: <span style="color:red">*</span></label>
+                <label for="customerName">Người đặt hàng: <span class="required">*</span></label>
                 <input type="text" id="customerName" name="customerName" maxlength="200" th:value="${customerName}"
-                    style="width: 400px;">
+                    style="width: 400px;" onblur="validateCustomerName()">
             </div>
 
             <!-- ② Địa chỉ giao hàng -->
             <div class="form-group">
-                <label for="deliveryAddress">Địa chỉ giao hàng: <span style="color:red">*</span></label>
+                <label for="deliveryAddress">Địa chỉ giao hàng: <span class="required">*</span></label>
                 <input type="text" id="deliveryAddress" name="deliveryAddress" maxlength="400"
-                    th:value="${deliveryAddress}" style="width: 400px;">
+                    th:value="${deliveryAddress}" style="width: 400px;" onblur="validateDeliveryAddress()">
             </div>
 
             <!-- ③ Ngày giao hàng -->
             <div class="form-group">
-                <label for="deliveryDate">Ngày giao hàng (YYYY/MM/DD):</label>
+                <label for="deliveryDate">Ngày giao hàng (YYYY/MM/DD): <span class="required">*</span></label>
                 <input type="text" id="deliveryDate" name="deliveryDate" maxlength="10" th:value="${deliveryDate}"
-                    placeholder="YYYY/MM/DD" style="width: 150px;">
+                    placeholder="YYYY/MM/DD" style="width: 200px;" onblur="validateDeliveryDate()">
             </div>
 
             <!-- ④ Danh sách sản phẩm đặt hàng -->
             <div class="product-list">
-                <h3>Danh sách sản phẩm đặt hàng</h3>
+                <h3>📦 Danh Sách Sản Phẩm Đặt Hàng</h3>
+
                 <div th:if="${orderProducts != null and !orderProducts.empty}">
                     <div class="product-item" th:each="product, iterStat : ${orderProducts}">
+                        <!-- Hidden fields để submit -->
                         <input type="hidden" th:name="'products[' + ${iterStat.index} + '].productId'"
                             th:value="${product.productId}">
                         <input type="hidden" th:name="'products[' + ${iterStat.index} + '].productName'"
@@ -107,32 +222,42 @@
                         <input type="hidden" th:name="'products[' + ${iterStat.index} + '].price'"
                             th:value="${product.price}">
 
-                        <strong th:text="${product.productName}"></strong>
-                        <br>
-                        <span>Giá: </span><span th:text="${product.price}"></span>
-                        <span> VND</span>
+                        <div>
+                            <strong th:text="${product.productName}">Tên sản phẩm</strong>
+                            <br>
+                            <span>Giá: </span>
+                            <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')}">0</span>
+                            <span> VND</span>
+                        </div>
                         <br>
 
                         <!-- ⑦ Số lượng đặt hàng -->
                         <label>Số lượng đặt hàng:</label>
-                        <input type="text" th:id="'quantity_' + ${iterStat.index}"
+                        <input type="text" class="quantity-input" th:id="'quantity_' + ${iterStat.index}"
                             th:name="'products[' + ${iterStat.index} + '].orderQuantity'"
                             th:value="${product.orderQuantity}" th:attr="data-product-name=${product.productName},
                                         data-available-quantity=${product.availableQuantity},
-                                        data-index=${iterStat.index}" class="quantity-input"
-                            onblur="validateQuantity(this)" style="width: 80px;">
-                        <span th:text="'(Tồn kho: ' + ${product.availableQuantity} + ')'"></span>
+                                        data-index=${iterStat.index}" onblur="validateQuantity(this)">
+                        <span class="stock-info" th:text="'(Tồn kho: ' + ${product.availableQuantity} + ')'">
+                            (Tồn kho: 0)
+                        </span>
                     </div>
                 </div>
-                <div th:if="${orderProducts == null or orderProducts.empty}">
-                    <p>Không có sản phẩm nào được chọn để đặt hàng.</p>
+
+                <div th:if="${orderProducts == null or orderProducts.empty}" class="empty-message">
+                    <p>⚠️ Không có sản phẩm nào được chọn để đặt hàng.</p>
+                    <p style="margin-top: 10px;">
+                        <a th:href="@{/products/list}" style="color: #4CAF50; text-decoration: none; font-weight: 600;">
+                            « Quay lại danh sách sản phẩm
+                        </a>
+                    </p>
                 </div>
             </div>
 
             <!-- ⑤⑥ Buttons -->
             <div class="buttons">
-                <button type="submit" name="action" value="order">Đặt hàng</button>
-                <button type="button" onclick="confirmCancel()">Cancel</button>
+                <button type="submit" name="action" value="order">Đặt Hàng</button>
+                <button type="button" onclick="confirmCancel()">Hủy</button>
             </div>
         </form>
     </div>
@@ -140,406 +265,196 @@
     <script th:inline="javascript">
         /*<![CDATA[*/
 
-        // ⑦ Validate số lượng khi lostfocus
+        // =====================================================================
+        // JS Layer: Validate UX (Lost Focus) - Visual feedback KHÔNG dùng alert
+        // Alert chỉ dùng khi submit và backend trả về lỗi
+        // =====================================================================
+
+        // ① JS Validate: Người đặt hàng khi lost focus - Visual warning only
+        function validateCustomerName() {
+            const input = document.getElementById('customerName');
+            const value = input.value.trim();
+
+            if (value === '') {
+                input.style.borderColor = '#ff9800';
+                input.style.backgroundColor = '#fff3e0';
+            } else {
+                input.style.borderColor = '#ddd';
+                input.style.backgroundColor = 'white';
+            }
+        }
+
+        // ② JS Validate: Địa chỉ giao hàng khi lost focus - Visual warning only
+        function validateDeliveryAddress() {
+            const input = document.getElementById('deliveryAddress');
+            const value = input.value.trim();
+
+            if (value === '') {
+                input.style.borderColor = '#ff9800';
+                input.style.backgroundColor = '#fff3e0';
+            } else {
+                input.style.borderColor = '#ddd';
+                input.style.backgroundColor = 'white';
+            }
+        }
+
+        // ③ JS Validate: Ngày giao hàng khi lost focus
+        function validateDeliveryDate() {
+            const input = document.getElementById('deliveryDate');
+            const value = input.value.trim();
+
+            if (value === '') {
+                // Giống như ① và ② - chỉ visual warning, KHÔNG alert
+                input.style.borderColor = '#ff9800';
+                input.style.backgroundColor = '#fff3e0';
+                return;
+            }
+
+            // Kiểm tra định dạng YYYY/MM/DD
+            const datePattern = /^\d{4}\/\d{2}\/\d{2}$/;
+            if (!datePattern.test(value)) {
+                input.style.borderColor = '#f44336';
+                input.style.backgroundColor = '#ffebee';
+                alert('Ngày giao hàng không hợp lệ, xin hãy nhập lại');
+                input.focus();
+                return;
+            }
+
+            // Kiểm tra ngày hợp lệ và >= ngày hiện tại
+            try {
+                const parts = value.split('/');
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]);
+                const day = parseInt(parts[2]);
+
+                const deliveryDate = new Date(year, month - 1, day);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Kiểm tra ngày hợp lệ
+                if (deliveryDate.getFullYear() !== year ||
+                    deliveryDate.getMonth() !== month - 1 ||
+                    deliveryDate.getDate() !== day) {
+                    input.style.borderColor = '#f44336';
+                    input.style.backgroundColor = '#ffebee';
+                    alert('Ngày giao hàng không hợp lệ, xin hãy nhập lại');
+                    input.focus();
+                    return;
+                }
+
+                // Kiểm tra ngày >= ngày hiện tại
+                if (deliveryDate < today) {
+                    input.style.borderColor = '#f44336';
+                    input.style.backgroundColor = '#ffebee';
+                    alert('Ngày giao hàng không hợp lệ, xin hãy nhập lại');
+                    input.focus();
+                    return;
+                }
+
+                // Valid
+                input.style.borderColor = '#4CAF50';
+                input.style.backgroundColor = '#f1f8e9';
+            } catch (e) {
+                input.style.borderColor = '#f44336';
+                input.style.backgroundColor = '#ffebee';
+                alert('Ngày giao hàng không hợp lệ, xin hãy nhập lại');
+                input.focus();
+            }
+        }
+
+        // ⑦ JS Validate: Số lượng sản phẩm khi lost focus
         function validateQuantity(input) {
             const value = input.value.trim();
             const productName = input.getAttribute('data-product-name');
             const availableQuantity = parseInt(input.getAttribute('data-available-quantity'));
 
-            // Kiểm tra rỗng
+            // Cho phép để rỗng
             if (value === '') {
-                return; // Cho phép để rỗng
+                input.style.borderColor = '#ddd';
+                input.style.backgroundColor = 'white';
+                return;
             }
 
-            // Kiểm tra số nguyên
+            // Kiểm tra chuỗi không hợp lệ (chứa ký tự không phải số)
             if (!/^\d+$/.test(value)) {
+                input.style.borderColor = '#f44336';
+                input.style.backgroundColor = '#ffebee';
                 alert('Số lượng đặt hàng không hợp lệ, xin hãy nhập lại');
                 input.focus();
+                // Xóa giá trị không hợp lệ
+                input.value = '';
                 return;
             }
 
             const quantity = parseInt(value);
 
+            // Kiểm tra số lượng phải lớn hơn 0
+            if (quantity <= 0) {
+                input.style.borderColor = '#f44336';
+                input.style.backgroundColor = '#ffebee';
+                alert('Số lượng đặt hàng phải lớn hơn 0');
+                input.focus();
+                input.value = '';
+                return;
+            }
+
             // Kiểm tra số lượng tồn kho
             if (quantity > availableQuantity) {
+                input.style.borderColor = '#f44336';
+                input.style.backgroundColor = '#ffebee';
                 alert(`Số lượng đặt hàng của sản phẩm ${productName} không đủ trong kho. Xin hãy nhập số lượng <= ${availableQuantity}`);
+                input.value = '';
                 input.focus();
                 return;
             }
+
+            // Valid
+            input.style.borderColor = '#4CAF50';
+            input.style.backgroundColor = '#f1f8e9';
         }
 
-        // ⑥ Confirm cancel
+        // ⑥ Confirm cancel - Quay về product list và khôi phục search state
         function confirmCancel() {
-            if (confirm('Bạn có muốn kết thúc đặt hàng quay trở về màn hình danh sách sản phẩm?')) {
-                window.location.href = /*[[@{/products/list}]]*/ '/products/list';
+            if (confirm('Bạn có muốn kết thúc đặt hàng và quay trở về màn hình danh sách sản phẩm?')) {
+                // Sử dụng endpoint /order/cancel để tự động restore search state từ session
+                window.location.href = /*[[@{/order/cancel}]]*/ '/order/cancel';
             }
         }
 
         // ⑨ Logout
         function logout() {
-            window.location.href = /*[[@{/logout}]]*/ '/logout';
+            if (confirm('Bạn có muốn đăng xuất?')) {
+                window.location.href = /*[[@{/logout}]]*/ '/logout';
+            }
         }
 
-        // Focus vào field bị lỗi nếu có
+        // =====================================================================
+        // Thymeleaf Layer: Hiển thị lỗi từ Backend (Java) và focus vào field lỗi
+        // =====================================================================
         window.onload = function () {
+            // Hiển thị error message từ backend bằng alert
+            const errorMessage = /*[[${errorMessage}]]*/ '';
+            if (errorMessage) {
+                // Chuyển \n thành newline thật trong JavaScript
+                const formattedMessage = errorMessage.replace(/\\n/g, '\n');
+                alert(formattedMessage);
+            }
+
+            // Focus vào field bị lỗi (từ backend trả về)
             const focusField = /*[[${focusField}]]*/ '';
             if (focusField) {
                 const element = document.getElementById(focusField);
                 if (element) {
                     element.focus();
+                    // Scroll tới element để đảm bảo nó visible
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    console.log('Focused on field: ' + focusField);
                 }
             }
         };
 
         /*]]>*/
     </script>
-</body>
-
-</html>
-
-.button-group {
-flex-direction: column;
-}
-
-button,
-.btn {
-width: 100%;
-}
-
-table {
-font-size: 12px;
-}
-
-th,
-td {
-padding: 8px;
-}
-}
-</style>
-</th:block>
-</head>
-
-<body>
-    <section layout:fragment="content">
-        <h1>🛒 Trang Đặt Hàng</h1>
-
-        <!-- Error Messages -->
-        <div th:if="${error}" class="alert-error" th:utext="${error}"></div>
-
-        <form id="orderForm" th:action="@{/orders/confirm}" method="post">
-            <!-- Hidden fields for search state preservation -->
-            <input type="hidden" name="keyword" th:value="${keyword}">
-            <input type="hidden" name="producttypeId" th:value="${producttypeId}">
-            <input type="hidden" name="page" th:value="${page}">
-
-            <!-- Thông tin người đặt hàng -->
-            <div class="order-form-container">
-                <h2 class="section-title">Thông tin người đặt hàng</h2>
-
-                <div class="form-group">
-                    <label for="customerName">Người đặt hàng: <span style="color: red;">*</span></label>
-                    <input type="text" id="customerName" name="customerName"
-                        th:value="${customerName != null ? customerName : username}" maxlength="200"
-                        placeholder="Nhập tên người đặt hàng">
-                    <div id="customerNameError" class="field-error-message"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="deliveryAddress">Địa chỉ giao hàng: <span style="color: red;">*</span></label>
-                    <input type="text" id="deliveryAddress" name="deliveryAddress" th:value="${deliveryAddress}"
-                        maxlength="400" placeholder="Nhập địa chỉ giao hàng">
-                    <div id="deliveryAddressError" class="field-error-message"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="deliveryDate">Ngày giao hàng (YYYY/MM/DD): <span style="color: red;">*</span></label>
-                    <input type="text" id="deliveryDate" name="deliveryDate" th:value="${deliveryDate}" maxlength="10"
-                        placeholder="YYYY/MM/DD">
-                    <div id="deliveryDateError" class="field-error-message"></div>
-                </div>
-            </div>
-
-            <!-- Danh sách sản phẩm -->
-            <h2 class="section-title">Danh sách sản phẩm</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Hình ảnh</th>
-                        <th>Tên sản phẩm / Mô tả</th>
-                        <th>Loại sản phẩm</th>
-                        <th>Số lượng</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="item, iterStat : ${orderItems}">
-                        <td th:text="${iterStat.index + 1}">1</td>
-                        <td>
-                            <img th:src="@{'/products/image/' + ${item.productId}}" alt="Product Image"
-                                class="product-img" onerror="this.style.display='none'">
-                        </td>
-                        <td>
-                            <div><strong><span th:text="${item.productId}">11010001</span> - <span
-                                        th:text="${item.productName}">Product Name</span></strong></div>
-                            <div style="font-size: 12px; color: #666;" th:if="${item.productDescription}">
-                                <span th:text="${item.productDescription}">Description</span>
-                            </div>
-                        </td>
-                        <td th:text="${item.producttypeName}">Category</td>
-                        <td>
-                            <input type="number" class="quantity-input" th:name="'quantities'"
-                                th:id="'qty_' + ${item.productId}" th:data-product-id="${item.productId}"
-                                th:data-product-name="${item.productName}"
-                                th:data-available-stock="${item.availableStock}" th:value="${item.quantity}" min="1"
-                                onblur="validateQuantity(this)">
-                            <input type="hidden" th:name="'productIds'" th:value="${item.productId}">
-                            <div th:id="'qtyError_' + ${item.productId}" class="field-error-message"></div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- Buttons -->
-            <div class="button-group">
-                <button type="button" class="btn btn-confirm" onclick="submitOrder()">Đặt hàng</button>
-                <button type="button" class="btn btn-cancel" onclick="cancelOrder()">Cancel</button>
-            </div>
-        </form>
-
-        <script th:inline="javascript">
-            const orderItems = /*[[${orderItems}]]*/[];
-            const keyword = /*[[${keyword}]]*/ '';
-            const producttypeId = /*[[${producttypeId}]]*/ null;
-            const page = /*[[${page}]]*/ 1;
-
-            // Validate quantity on blur
-            function validateQuantity(input) {
-                const productId = input.dataset.productId;
-                const productName = input.dataset.productName;
-                const availableStock = parseInt(input.dataset.availableStock);
-                const quantity = input.value.trim();
-                const errorDiv = document.getElementById('qtyError_' + productId);
-
-                // Clear previous error
-                errorDiv.classList.remove('show');
-                errorDiv.textContent = '';
-                input.classList.remove('error');
-
-                // Check if empty
-                if (quantity === '') {
-                    return;
-                }
-
-                // Check if integer
-                if (!/^\d+$/.test(quantity)) {
-                    errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
-                    errorDiv.classList.add('show');
-                    input.classList.add('error');
-                    input.focus();
-                    return false;
-                }
-
-                const qtyValue = parseInt(quantity);
-
-                // Check if positive
-                if (qtyValue <= 0) {
-                    errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
-                    errorDiv.classList.add('show');
-                    input.classList.add('error');
-                    input.focus();
-                    return false;
-                }
-
-                // Check against available stock
-                if (qtyValue > availableStock) {
-                    errorDiv.textContent = `Số lượng đặt hàng của sản phẩm ${productName} không đủ trong kho. Xin hãy nhập số lượng <= ${availableStock}`;
-                    errorDiv.classList.add('show');
-                    input.classList.add('error');
-                    input.focus();
-                    return false;
-                }
-
-                return true;
-            }
-
-            // Validate date format and value
-            function validateDate(dateString) {
-                // Check format YYYY/MM/DD
-                const datePattern = /^(\d{4})\/(\d{2})\/(\d{2})$/;
-                const match = dateString.match(datePattern);
-
-                if (!match) {
-                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
-                }
-
-                const year = parseInt(match[1]);
-                const month = parseInt(match[2]);
-                const day = parseInt(match[3]);
-
-                // Check valid date
-                const date = new Date(year, month - 1, day);
-                if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
-                }
-
-                // Check if date is not in the past
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                date.setHours(0, 0, 0, 0);
-
-                if (date < today) {
-                    return { valid: false, message: 'Ngày giao hàng không hợp lệ, xin hãy nhập lại' };
-                }
-
-                return { valid: true };
-            }
-
-            // Submit order
-            function submitOrder() {
-                let isValid = true;
-                let firstErrorField = null;
-
-                // Clear all errors
-                document.querySelectorAll('.error-message').forEach(el => {
-                    el.classList.remove('show');
-                    el.textContent = '';
-                });
-                document.querySelectorAll('input').forEach(el => {
-                    el.classList.remove('error');
-                });
-
-                // Validate customer name
-                const customerName = document.getElementById('customerName').value.trim();
-                if (!customerName) {
-                    const errorDiv = document.getElementById('customerNameError');
-                    errorDiv.textContent = 'Xin hãy nhập thông tin người đặt hàng';
-                    errorDiv.classList.add('show');
-                    document.getElementById('customerName').classList.add('error');
-                    if (!firstErrorField) firstErrorField = document.getElementById('customerName');
-                    isValid = false;
-                }
-
-                // Validate delivery address
-                const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
-                if (!deliveryAddress) {
-                    const errorDiv = document.getElementById('deliveryAddressError');
-                    errorDiv.textContent = 'Xin hãy nhập thông tin địa chỉ giao hàng';
-                    errorDiv.classList.add('show');
-                    document.getElementById('deliveryAddress').classList.add('error');
-                    if (!firstErrorField) firstErrorField = document.getElementById('deliveryAddress');
-                    isValid = false;
-                }
-
-                // Validate delivery date
-                const deliveryDate = document.getElementById('deliveryDate').value.trim();
-                if (!deliveryDate) {
-                    const errorDiv = document.getElementById('deliveryDateError');
-                    errorDiv.textContent = 'Ngày giao hàng không hợp lệ, xin hãy nhập lại';
-                    errorDiv.classList.add('show');
-                    document.getElementById('deliveryDate').classList.add('error');
-                    if (!firstErrorField) firstErrorField = document.getElementById('deliveryDate');
-                    isValid = false;
-                } else {
-                    const dateValidation = validateDate(deliveryDate);
-                    if (!dateValidation.valid) {
-                        const errorDiv = document.getElementById('deliveryDateError');
-                        errorDiv.textContent = dateValidation.message;
-                        errorDiv.classList.add('show');
-                        document.getElementById('deliveryDate').classList.add('error');
-                        if (!firstErrorField) firstErrorField = document.getElementById('deliveryDate');
-                        isValid = false;
-                    }
-                }
-
-                // Validate quantities
-                const invalidProducts = [];
-                document.querySelectorAll('.quantity-input').forEach(input => {
-                    const productId = input.dataset.productId;
-                    const productName = input.dataset.productName;
-                    const availableStock = parseInt(input.dataset.availableStock);
-                    const quantity = input.value.trim();
-
-                    if (quantity) {
-                        if (!/^\d+$/.test(quantity) || parseInt(quantity) <= 0) {
-                            const errorDiv = document.getElementById('qtyError_' + productId);
-                            errorDiv.textContent = 'Số lượng đặt hàng không hợp lệ, xin hãy nhập lại';
-                            errorDiv.classList.add('show');
-                            input.classList.add('error');
-                            if (!firstErrorField) firstErrorField = input;
-                            isValid = false;
-                        } else if (parseInt(quantity) > availableStock) {
-                            invalidProducts.push({
-                                name: productName,
-                                stock: availableStock,
-                                input: input
-                            });
-                        }
-                    }
-                });
-
-                // Handle invalid stock quantities
-                if (invalidProducts.length > 0) {
-                    if (invalidProducts.length === 1) {
-                        const product = invalidProducts[0];
-                        const errorDiv = document.getElementById('qtyError_' + product.input.dataset.productId);
-                        errorDiv.textContent = `Số lượng đặt hàng của sản phẩm ${product.name} không đủ trong kho. Xin hãy nhập số lượng <= ${product.stock}`;
-                        errorDiv.classList.add('show');
-                        product.input.classList.add('error');
-                        if (!firstErrorField) firstErrorField = product.input;
-                    } else {
-                        let message = 'Dưới đây các sản phẩm mà số lượng đặt hàng lớn hơn số lượng trong kho. Xin hãy nhập lại số lượng\\n';
-                        invalidProducts.forEach(product => {
-                            message += `\\nSản phẩm ${product.name} có số lượng tồn kho ${product.stock}`;
-                            const errorDiv = document.getElementById('qtyError_' + product.input.dataset.productId);
-                            errorDiv.textContent = `Số lượng tồn kho: ${product.stock}`;
-                            errorDiv.classList.add('show');
-                            product.input.classList.add('error');
-                        });
-                        alert(message);
-                        if (!firstErrorField) firstErrorField = invalidProducts[0].input;
-                    }
-                    isValid = false;
-                }
-
-                if (!isValid) {
-                    if (firstErrorField) {
-                        firstErrorField.focus();
-                    }
-                    return;
-                }
-
-                // If all validations pass, submit the form
-                document.getElementById('orderForm').submit();
-            }
-
-            // Cancel order
-            function cancelOrder() {
-                if (!confirm('Bạn có muốn kết thúc đặt hàng quay trở về màn hình danh sách sản phẩm?')) {
-                    return;
-                }
-
-                let url = '/products/list?';
-                if (keyword) {
-                    url += 'keyword=' + encodeURIComponent(keyword) + '&';
-                }
-                if (producttypeId) {
-                    url += 'producttypeId=' + producttypeId + '&';
-                }
-                url += 'page=' + page;
-
-                // Add quantities to restore
-                document.querySelectorAll('.quantity-input').forEach(input => {
-                    const productId = input.dataset.productId;
-                    const quantity = input.value.trim();
-                    if (quantity) {
-                        url += '&qty_' + productId + '=' + quantity;
-                    }
-                });
-
-                window.location.href = url;
-            }
-        </script>
-    </section>
 </body>
 
 </html>
